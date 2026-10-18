@@ -50,3 +50,5 @@ tests/scripts.tests.ps1
 tests/SessionAgentTests.cs
 tests/StreamingHostTests.cs
 scripts/release-files.txt
+src/WindowsInstallPaths.cs
+tests/InstallationDiscoveryTests.cs

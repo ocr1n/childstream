@@ -4,8 +4,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
-using Microsoft.Win32;
 
 enum ChildAppKind { Chrome, Edge, Steam, WallpaperEngine, Other }
 enum AppLaunchState { Dispatched, EarlyExit, OtherSession, InspectionDenied, Failed }
@@ -48,6 +46,8 @@ static class ChildAppCatalog
 }
 sealed class NativeAppDiscovery : IAppDiscoverySource
 {
+    readonly string root; readonly Func<IEnumerable<string>> inventory;
+    public NativeAppDiscovery(string root = null, Func<IEnumerable<string>> inventory = null) { this.root = root ?? AppDomain.CurrentDomain.BaseDirectory; this.inventory = inventory ?? WindowsInstallPaths.NativeApps; }
     public static ChildAppKind Classify(string path) {
         var info = FileVersionInfo.GetVersionInfo(path); string branding = (info.ProductName ?? "") + " " + (info.FileDescription ?? "");
         if (branding.IndexOf("Google Chrome", StringComparison.OrdinalIgnoreCase) >= 0) return ChildAppKind.Chrome;
@@ -57,17 +57,15 @@ sealed class NativeAppDiscovery : IAppDiscoverySource
         return ChildAppKind.Other;
     }
     public IEnumerable<ChildApp> Candidates() {
-        var paths = new List<string>();
-        foreach (string folder in new[] { Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) }) {
-            paths.Add(Path.Combine(folder, "Google", "Chrome", "Application", "chrome.exe")); paths.Add(Path.Combine(folder, "Microsoft", "Edge", "Application", "msedge.exe"));
+        var saved = ChildAppCatalog.LoadRegistered(Path.Combine(root, "child-apps.txt"));
+        foreach (string raw in saved.Concat(inventory()).Distinct(StringComparer.OrdinalIgnoreCase)) {
+            ChildApp app = null;
+            try { string path = WindowsInstallPaths.Executable(raw); if (path != null && File.Exists(path)) app = ChildAppCatalog.Register(path); }
+            catch (IOException) { } catch (UnauthorizedAccessException) { } catch (ArgumentException) { } catch (System.Security.SecurityException) { } catch (System.ComponentModel.Win32Exception) { }
+            if (app != null) yield return app;
         }
-        string steam = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86) + @"\Steam";
-        try { using (var key = Registry.CurrentUser.OpenSubKey(@"Software\Valve\Steam")) if (key != null && key.GetValue("SteamPath") is string) steam = ((string)key.GetValue("SteamPath")).Replace('/', '\\'); } catch (System.Security.SecurityException) { } catch (UnauthorizedAccessException) { }
-        paths.Add(Path.Combine(steam, "steam.exe")); var libraries = new List<string> { steam };
-        try { string file = Path.Combine(steam, "steamapps", "libraryfolders.vdf"); if (File.Exists(file) && new FileInfo(file).Length < 1024 * 1024) foreach (Match match in Regex.Matches(File.ReadAllText(file), "\"path\"\\s*\"([^\"]+)\"")) libraries.Add(match.Groups[1].Value.Replace(@"\\", @"\")); } catch (IOException) { } catch (UnauthorizedAccessException) { }
-        foreach (string library in libraries) { paths.Add(Path.Combine(library, "steamapps", "common", "wallpaper_engine", "wallpaper64.exe")); paths.Add(Path.Combine(library, "steamapps", "common", "wallpaper_engine", "wallpaper32.exe")); }
-        foreach (string path in paths.Distinct(StringComparer.OrdinalIgnoreCase)) { ChildApp app = null; try { if (File.Exists(path)) app = ChildAppCatalog.Register(path); } catch (IOException) { } catch (UnauthorizedAccessException) { } if (app != null) yield return app; }
     }
+
 }
 sealed class AppLaunchSpec
 {

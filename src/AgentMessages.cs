@@ -82,7 +82,7 @@ sealed class AgentService
     readonly object gate = new object(); string selected; ChildHostProfile profile; HostController controller;
     readonly Dictionary<string, ChildApp> apps = new Dictionary<string, ChildApp>();
     public AgentService(string root, int session, IHostDiscoverySource source, Func<string, HostProcess[]> processes, Func<ChildHostProfile, HostLaunchReceipt> launch, Func<bool> isChild, IAppDiscoverySource appSource = null) {
-        this.appSource = appSource ?? new NativeAppDiscovery(); this.root = root; this.session = session; this.source = source; this.processes = processes; this.launch = launch; this.isChild = isChild; selected = HostSelectionStore.Load(Path.Combine(root, "host-selection.txt"));
+        this.appSource = appSource ?? new NativeAppDiscovery(root); this.root = root; this.session = session; this.source = source; this.processes = processes; this.launch = launch; this.isChild = isChild; selected = HostSelectionStore.Load(Path.Combine(root, "host-selection.txt"));
     }
     string Key(HostInstallation host) { return HostProfiles.Digest(instance + "|" + host.Id + "|" + (profile != null && profile.Installation.Id == host.Id ? profile.Identity : "unprepared")); }
     bool StillSelected(ChildHostProfile prepared) { return isChild() && selected == prepared.Installation.Id && prepared.CurrentIdentity() == prepared.Identity && HostDiscovery.Find(root, source).Installations.Any(h => h.Id == prepared.Installation.Id); }

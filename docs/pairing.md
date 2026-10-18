@@ -15,7 +15,8 @@ other device. Chrome inside the child desktop is optional for pairing.
 3. Choose **Start desktop**, enter your Windows account password if asked (not a
    Windows Hello PIN), and wait for **Connected**. **No host detected** does not
    block this desktop or its applications.
-4. If a host is missing, use **Install a host...** or install it inside the child.
+4. If a host is missing, **Install a host...** opens the chosen host's official
+   GitHub repository. Download and set it up yourself, including inside the child.
    Select **Refresh** afterward; **Browse...** finds portable/nonstandard EXEs.
 5. Choose Sunshine or Apollo if several hosts are detected. Confirm **Start
    [host]**, then approve the Windows elevation prompt **inside the child preview**
@@ -65,6 +66,9 @@ and host-specific extensions require their own device tests; see the
 
 Use **Open app** in ChildStream. Select an app, then **Open in child**. **Browse
 app...** accepts an installed local EXE, not a shortcut, script or command string.
+Custom paths come from Windows registrations, running apps, Steam libraries and
+your saved Browse choices. For an unregistered portable app, choose its EXE once.
+If it moves later, update that choice with Browse.
 
 Chrome and Edge use persistent separate profiles automatically. Main Chrome can
 stay open; do not open its normal profile in both sessions. Existing ordinary

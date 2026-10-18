@@ -13,6 +13,7 @@ control. No external managed packages, embedded browser or separate helper binar
 | LauncherWindow.cs / ChildAppWindow.cs / ThemePickerWindow.cs / AppThemes.cs | Native forms, semantic theme tokens, previews and diagnostics. |
 | SessionAgent.cs / AgentMessages.cs / HelperRecovery.cs | Bounded protocol, peer/session validation and recovery. |
 | HostDiscovery.cs / NativeHostDiscovery.cs / HostProfiles.cs / StreamingHost.cs | Host identity, selection, profile/port isolation and ownership. |
+| WindowsInstallPaths.cs | Validated registry paths, App Paths/uninstall/Steam discovery and library manifests. |
 | ChildApps.cs / ChildBrowser.cs | App discovery/dispatch and independent browser profiles. |
 
 The parent obtains the actual child ID from Windows. Pipe names include user,
@@ -30,6 +31,14 @@ Host startup revalidates installation and prepared profile identity. Child
 profiles isolate ports, credentials, certificates, pairing, app list and logs.
 Process ownership needs matching session/path/config or a validated launch receipt.
 Ambiguity stays unknown. Main services and conflicting listeners are never stopped.
+
+Discovery resolves HKCU/HKLM and 32/64-bit App Paths, supported uninstall metadata,
+Steam registrations/libraries/manifests, running app paths, standard OS folders and
+installation-scoped Browse choices. Browser shortcut resolution uses the full
+candidate source rather than the display-limited catalog. Unregistered portable
+locations require an explicit Browse choice; do not scan every drive or guess an
+app's new location after it moves. Host install actions open official GitHub
+repositories for manual setup. Chrome policies and ordinary icons are unchanged.
 
 Recovery is a bounded, same-user, least-privilege Task Scheduler launch of this
 EXE in the actual child. Starting a streaming host remains separately confirmed.

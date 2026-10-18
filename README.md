@@ -77,8 +77,9 @@ installed separately; they are not bundled in this repository.
    attached while streaming; **Minimize to tray** keeps the connection alive.
 
 With no host installed, **Install a host...** is prominent. With a detected host,
-the install action becomes subdued and asks before opening another host's download
-page. VibePollo is detected, but independent child startup is unsupported in this version.
+the install action becomes subdued and asks before opening another host's GitHub
+page. Each choice opens the official project repository; you download and set up
+the host yourself. ChildStream does not download or run its installer. VibePollo is detected, but independent child startup is unsupported in this version.
 
 ## Pair a client
 
@@ -99,6 +100,14 @@ ports are separate. The main host's default web port, usually 47990, is not the
 child's settings page. See the [complete pairing guide](docs/pairing.md).
 
 ## Apps, themes and controls
+
+App discovery reads Windows App Paths, supported uninstall records and Steam's
+registered location in both per-user and system 32/64-bit views. It also checks
+running executable paths, Steam libraries/app manifests and standard OS folders.
+These are resolved on your PC, with no developer-specific drive or username.
+Unregistered portable apps need Browse once; the saved executable path is reused
+by app discovery and the child browser shortcut. If an app moves without updating
+its registrations, Browse to the new location rather than relying on a guessed path.
 
 **Open app** lists detected browsers, Steam and Wallpaper Engine. **Browse app...**
 adds a local installed EXE. Registered apps take priority, newest choice first.

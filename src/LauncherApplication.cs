@@ -67,8 +67,8 @@ sealed class LauncherApplication : IDisposable
         window.BrowseHostRequested += delegate { BrowseHost(); };
         window.OpenAppRequested += delegate { OpenApps(); };
         window.InstallRequested += name => {
-            string url = name == "Sunshine" ? "https://github.com/LizardByte/Sunshine/releases" : name == "Apollo" ? "https://github.com/ClassicOldSong/Apollo/releases" : name == "VibePollo" ? "https://github.com/Nonary/Vibepollo/releases" : null;
-            if (url != null) TryOpen(url);
+            string url = HostInstallPolicy.GithubUrl(name);
+            if (url != null && TryOpen(url)) window.SetNotice("Opened " + name + " on GitHub. Install and set it up yourself, then Refresh hosts or Browse to its executable.");
         };
         window.EndSessionRequested += delegate { EndSession(); };
         window.MinimizeRequested += delegate { window.WindowState = FormWindowState.Minimized; };

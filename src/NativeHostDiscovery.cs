@@ -12,7 +12,7 @@ sealed class NativeHostDiscovery : IHostDiscoverySource
     static void AddDirectory(List<HostCandidate> list, string directory, HostKind kind, string source)
     {
         if (string.IsNullOrWhiteSpace(directory)) return;
-        directory = directory.Trim().Trim('"');
+        directory = WindowsInstallPaths.DirectoryPath(directory); if (directory == null) return;
         list.Add(new HostCandidate(Path.Combine(directory, "sunshine.exe"), kind, source));
         if (kind != HostKind.Sunshine) list.Add(new HostCandidate(Path.Combine(directory, kind == HostKind.Apollo ? "apollo.exe" : "vibepollo.exe"), kind, source));
     }
@@ -24,27 +24,25 @@ sealed class NativeHostDiscovery : IHostDiscoverySource
         if (Regex.IsMatch(name, @"^Sunshine(?:\s|$)", RegexOptions.IgnoreCase)) return HostKind.Sunshine;
         return null;
     }
-    static void RegistryCandidates(List<HostCandidate> list, RegistryHive hive, RegistryView view)
-    {
-        try {
-            using (var baseKey = RegistryKey.OpenBaseKey(hive, view))
-            using (var uninstall = baseKey.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Uninstall")) {
-                if (uninstall == null) return;
-                foreach (string name in uninstall.GetSubKeyNames()) {
-                    try {
-                        using (var entry = uninstall.OpenSubKey(name)) {
-                            if (entry == null) continue; HostKind? kind = RegistryKind(entry.GetValue("DisplayName") as string); if (!kind.HasValue) continue;
-                            AddDirectory(list, entry.GetValue("InstallLocation") as string, kind.Value, "registry");
-                            string icon = entry.GetValue("DisplayIcon") as string;
-                            if (!string.IsNullOrWhiteSpace(icon)) {
-                                Match match = Regex.Match(icon.Trim(), "^(?:\"([^\"]+\\.exe)\"|(.+\\.exe))(?:,\\s*-?\\d+)?$", RegexOptions.IgnoreCase);
-                                if (match.Success) list.Add(new HostCandidate(match.Groups[1].Success ? match.Groups[1].Value : match.Groups[2].Value, kind.Value, "registry"));
-                            }
-                        }
-                    } catch (Exception ex) { list.Add(new HostCandidate(null, null, "registry") { Diagnostic = "An installed-host record was inaccessible: " + ex.Message }); }
-                }
+    public static HostCandidate[] DiscoverRegistry(RegistryKey software) {
+        var list = new List<HostCandidate>(); if (software == null) return list.ToArray();
+        foreach (string path in WindowsInstallPaths.RegistryExecutables(software, new[] { "sunshine.exe", "apollo.exe", "vibepollo.exe" })) list.Add(new HostCandidate(path, null, "app-path"));
+        using (var uninstall = software.OpenSubKey(@"Microsoft\Windows\CurrentVersion\Uninstall")) {
+            if (uninstall == null) return list.ToArray();
+            foreach (string name in uninstall.GetSubKeyNames()) {
+                try { using (var entry = uninstall.OpenSubKey(name)) {
+                    if (entry == null) continue; HostKind? kind = RegistryKind(entry.GetValue("DisplayName") as string); if (!kind.HasValue) continue;
+                    AddDirectory(list, entry.GetValue("InstallLocation") as string, kind.Value, "registry");
+                    string icon = WindowsInstallPaths.Executable(entry.GetValue("DisplayIcon") as string);
+                    if (icon != null) list.Add(new HostCandidate(icon, kind.Value, "registry"));
+                } } catch (Exception ex) { list.Add(new HostCandidate(null, null, "registry") { Diagnostic = "An installed-host record was inaccessible: " + ex.Message }); }
             }
-        } catch (Exception ex) { list.Add(new HostCandidate(null, null, "registry") { Diagnostic = "An installation registry view could not be read: " + ex.Message }); }
+        }
+        return list.ToArray();
+    }
+    static void RegistryCandidates(List<HostCandidate> list, RegistryHive hive, RegistryView view) {
+        try { using (var baseKey = RegistryKey.OpenBaseKey(hive, view)) using (var software = baseKey.OpenSubKey("Software")) list.AddRange(DiscoverRegistry(software)); }
+        catch (Exception ex) { list.Add(new HostCandidate(null, null, "registry") { Diagnostic = "An installation registry view could not be read: " + ex.Message }); }
     }
     public IEnumerable<HostCandidate> Candidates(string installRoot)
     {

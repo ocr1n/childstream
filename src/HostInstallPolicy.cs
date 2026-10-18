@@ -3,6 +3,14 @@ using System.Linq;
 
 sealed class HostInstallPolicy
 {
+    public static string GithubUrl(string name) {
+        switch (name) {
+            case "Sunshine": return "https://github.com/LizardByte/Sunshine";
+            case "Apollo": return "https://github.com/ClassicOldSong/Apollo";
+            case "VibePollo": return "https://github.com/Nonary/Vibepollo";
+            default: return null;
+        }
+    }
     AgentHost[] known = new AgentHost[0];
     bool missing;
     public bool HasHosts { get { return known.Length > 0; } }

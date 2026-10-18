@@ -22,10 +22,10 @@ static class AppThemes
     // Coordinated surfaces, softened text, quiet structure and readable focus are independent roles.
     public static readonly AppTheme[] All = {
         new AppTheme("light", "Light", "F2F4F5", "FBFCFC", "303A41", "56636C", "446A80", "F4F7F9", "BAC4CB", "E5EAED", "3F7059", "9A5058", "EDF0F2", "DCE2E6", "446A80"),
-        new AppTheme("dark", "Dark", "17191B", "202326", "CFD2D3", "A0A6AA", "3E515B", "E0E5E7", "596168", "2A2F34", "91B2A0", "D19B9A", "292D31", "34393D", "98B5BD"),
+        new AppTheme("dark", "Dark", "14191F", "202832", "DCE3E9", "A6B4C2", "496A82", "F3F7FA", "64788A", "2A3541", "99BAA6", "D6A2A3", "293541", "3A4856", "A0C2D8"),
         new AppTheme("ocean", "Ocean", "16242C", "1C303A", "CBD8DD", "9DB3BC", "3E6577", "EDF1F2", "4A6673", "29424E", "8EAF9D", "C99692", "233A44", "344C58", "7FABB9"),
         new AppTheme("sunset", "Sunset", "E8DFD0", "F1EBDD", "4A4035", "695846", "88643D", "F7F0E5", "BAA78D", "E2D5BD", "506948", "92554B", "E3D7C4", "D7C8B0", "8A633F"),
-        new AppTheme("forest", "Forest", "202A25", "29362D", "D1D6C6", "ABB7A0", "536348", "EFF0E4", "606D5A", "344235", "ACC39C", "CEAA90", "303F35", "41513F", "A6B88D"),
+        new AppTheme("forest", "Forest", "1B2722", "25372D", "E0E8D9", "B0BEA7", "4F6B43", "F3F7EC", "6C8068", "304335", "ACC99B", "D5AD97", "2D4035", "455C46", "B0C99C"),
         new AppTheme("rose", "Rose", "E6DDE1", "F0E9ED", "503F4C", "65505E", "805A73", "F8F1F6", "BAA2B1", "DECDD7", "576D5F", "96505C", "E1D3DC", "D3BEC9", "805A73")
     };
     public static AppTheme Find(string id) {
@@ -52,7 +52,7 @@ static class ThemeStyle
         if (control is AxHost) return; // The remote desktop belongs to Windows, not to our palette.
         var theme = AppTheme.Effective(selected, SystemInformation.HighContrast);
         string role = control.Tag as string;
-        control.BackColor = control is Label ? Color.Transparent : role == "canvas" ? theme.Canvas : role == "divider" ? theme.Divider : control is TextBox || role == "inset" ? theme.Inset : theme.Surface;
+        control.BackColor = control is Label ? Color.Transparent : role == "canvas" ? theme.Canvas : role == "divider" ? theme.Divider : role == "outline" ? theme.Border : role == "plain" ? theme.Surface : control is TextBox || role == "inset" ? theme.Inset : theme.Surface;
         control.ForeColor = role == "muted" ? theme.Muted : theme.Text;
         var button = control as Button;
         if (button != null) Button(button, selected);
@@ -67,13 +67,15 @@ static class ThemeStyle
         bool primary = button.Tag is bool && (bool)button.Tag;
         bool quiet = (button.Tag as string) == "quiet";
         button.FlatStyle = FlatStyle.Flat; button.UseVisualStyleBackColor = false;
-        button.BackColor = !button.Enabled || quiet ? theme.Quiet : primary ? theme.Accent : theme.Surface;
+        button.BackColor = !button.Enabled || quiet ? theme.Quiet : primary ? theme.Accent : theme.Inset;
         button.ForeColor = !button.Enabled || quiet ? theme.Muted : primary ? theme.OnAccent : theme.Text;
         button.FlatAppearance.BorderColor = primary && button.Enabled ? theme.Accent : theme.Border;
-        var painted = button as ThemedButton; if (painted != null) painted.FocusColor = theme.Focus;
-        button.FlatAppearance.MouseOverBackColor = primary ? theme.Accent : theme.Quiet;
-        button.FlatAppearance.MouseDownBackColor = primary ? theme.Accent : theme.Canvas;
+        var painted = button as ThemedButton; if (painted != null) { painted.FocusColor = theme.Focus; painted.HotTextColor = primary ? theme.OnAccent : theme.Text; }
+        button.FlatAppearance.MouseOverBackColor = primary ? Mix(theme.Accent, Color.Black, .10) : Mix(theme.Quiet, theme.Accent, .12);
+        button.FlatAppearance.MouseDownBackColor = primary ? Mix(theme.Accent, Color.Black, .22) : Mix(theme.Quiet, theme.Accent, .25);
+        button.Invalidate();
     }
+    public static Color Mix(Color a, Color b, double amount) { return Color.FromArgb((int)(a.R + (b.R - a.R) * amount), (int)(a.G + (b.G - a.G) * amount), (int)(a.B + (b.B - a.B) * amount)); }
     public static void Menu(ToolStrip strip, AppTheme selected)
     {
         var theme = AppTheme.Effective(selected, SystemInformation.HighContrast);
@@ -116,28 +118,47 @@ sealed class DiagnosticWindow : Form
         layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100)); layout.RowStyles.Add(new RowStyle(SizeType.AutoSize)); Controls.Add(layout);
         body = new TextBox { Multiline = true, ReadOnly = true, WordWrap = true, ScrollBars = ScrollBars.Vertical, Dock = DockStyle.Fill, Text = text, AccessibleName = "Full diagnostic details", SelectionStart = 0, SelectionLength = 0 }; layout.Controls.Add(body, 0, 0);
         var actions = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, Margin = new Padding(0, 12, 0, 0) }; layout.Controls.Add(actions, 0, 1);
-        var copy = new ThemedButton { Text = "Copy details", AccessibleName = "Copy details", AutoSize = true, MinimumSize = new Size(100, 32) };
+        var copy = new ThemedButton { Text = "Copy details", AccessibleName = "Copy details", AutoSize = true, MinimumSize = new Size(100, 40) };
         copy.Click += delegate { try { Clipboard.SetText(body.Text); copy.Text = "Copied"; } catch (Exception) { copy.Text = "Select text to copy"; } }; actions.Controls.Add(copy);
-        var close = new ThemedButton { Text = "Close", AutoSize = true, MinimumSize = new Size(90, 32), DialogResult = DialogResult.Cancel }; actions.Controls.Add(close); CancelButton = close;
+        var close = new ThemedButton { Text = "Close", AutoSize = true, MinimumSize = new Size(90, 40), DialogResult = DialogResult.Cancel }; actions.Controls.Add(close); CancelButton = close;
         ThemeStyle.Apply(this, theme); Shown += delegate { body.Select(0, 0); };
     }
     public void SetText(string text) { if (body.Text != text) body.Text = text; }
 }
 
-// WinForms' default disabled text ignores ForeColor. Paint that one state so dark themes stay legible.
+// Native keyboard and accessibility behavior, with consistent states across all palettes.
 sealed class ThemedButton : Button
 {
-    public Color FocusColor = SystemColors.Highlight;
+    bool hovered, mousePressed, keyPressed;
+    public Color FocusColor = SystemColors.Highlight, HotTextColor = SystemColors.ControlText;
+    public ThemedButton() { SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true); }
+    protected override void OnMouseEnter(EventArgs e) { base.OnMouseEnter(e); hovered = true; Invalidate(); }
+    protected override void OnMouseLeave(EventArgs e) { base.OnMouseLeave(e); hovered = mousePressed = false; Invalidate(); }
+    protected override void OnMouseDown(MouseEventArgs e) { base.OnMouseDown(e); if (e.Button == MouseButtons.Left) mousePressed = true; Invalidate(); }
+    protected override void OnMouseUp(MouseEventArgs e) { mousePressed = false; base.OnMouseUp(e); Invalidate(); }
+    protected override void OnMouseCaptureChanged(EventArgs e) { mousePressed = false; base.OnMouseCaptureChanged(e); Invalidate(); }
+    protected override void OnKeyDown(KeyEventArgs e) { base.OnKeyDown(e); if (e.KeyCode == Keys.Space) keyPressed = true; Invalidate(); }
+    protected override void OnKeyUp(KeyEventArgs e) { keyPressed = false; base.OnKeyUp(e); Invalidate(); }
+    protected override void OnLostFocus(EventArgs e) { keyPressed = mousePressed = false; base.OnLostFocus(e); Invalidate(); }
+    protected override void OnEnabledChanged(EventArgs e) { if (!Enabled) hovered = mousePressed = keyPressed = false; base.OnEnabledChanged(e); Invalidate(); }
+    static System.Drawing.Drawing2D.GraphicsPath Rounded(RectangleF rect, float radius) {
+        var path = new System.Drawing.Drawing2D.GraphicsPath(); float diameter = radius * 2;
+        path.AddArc(rect.X, rect.Y, diameter, diameter, 180, 90); path.AddArc(rect.Right - diameter, rect.Y, diameter, diameter, 270, 90);
+        path.AddArc(rect.Right - diameter, rect.Bottom - diameter, diameter, diameter, 0, 90); path.AddArc(rect.X, rect.Bottom - diameter, diameter, diameter, 90, 90); path.CloseFigure(); return path;
+    }
     protected override void OnPaint(PaintEventArgs e) {
-        if (Enabled || SystemInformation.HighContrast) {
-            base.OnPaint(e);
-            if (!SystemInformation.HighContrast && Focused && ShowFocusCues) using (var focus = new Pen(FocusColor, 2)) e.Graphics.DrawRectangle(focus, 1, 1, Width - 3, Height - 3);
-            return;
+        if (SystemInformation.HighContrast) { base.OnPaint(e); return; }
+        if (Width < 4 || Height < 4) return;
+        bool hot = Enabled && (hovered || keyPressed), down = Enabled && (mousePressed || keyPressed);
+        Color fill = down ? FlatAppearance.MouseDownBackColor : hot ? FlatAppearance.MouseOverBackColor : BackColor;
+        e.Graphics.Clear(Parent == null ? BackColor : Parent.BackColor);
+        e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        using (var path = Rounded(new RectangleF(1, 1, Width - 3, Height - 3), 5)) {
+            using (var brush = new SolidBrush(fill)) e.Graphics.FillPath(brush, path);
+            using (var pen = new Pen(Enabled && (hot || (Focused && ShowFocusCues)) ? FocusColor : FlatAppearance.BorderColor, Enabled && (Focused && ShowFocusCues) ? 2 : 1)) e.Graphics.DrawPath(pen, path);
         }
-        using (var brush = new SolidBrush(BackColor)) e.Graphics.FillRectangle(brush, ClientRectangle);
-        using (var pen = new Pen(FlatAppearance.BorderColor)) e.Graphics.DrawRectangle(pen, 0, 0, Width - 1, Height - 1);
         var flags = TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis;
         if (!ShowKeyboardCues) flags |= TextFormatFlags.HidePrefix;
-        TextRenderer.DrawText(e.Graphics, Text, Font, Rectangle.Inflate(ClientRectangle, -4, -2), ForeColor, flags);
+        TextRenderer.DrawText(e.Graphics, Text, Font, Rectangle.Inflate(ClientRectangle, -8, -2), hot ? HotTextColor : ForeColor, flags);
     }
 }

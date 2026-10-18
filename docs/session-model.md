@@ -42,7 +42,10 @@ local child preview. That does not establish that every secure prompt can be
 captured and controlled over Moonlight. UAC normally switches to a protected
 Winlogon desktop, with restricted access. General secure-desktop capture/input
 requires separate host-specific testing. No automatic consent, global UAC change
-or blanket elevated app launcher was added.
+or blanket elevation is used. **Open app / Run as administrator** explicitly
+requests Windows `runas` from the child helper. Only one app launch can remain
+pending at a time. Status checks remain responsive while consent waits, and
+canceling it does not retry.
 [Microsoft desktop and UAC behavior](https://learn.microsoft.com/en-us/windows/win32/winstation/desktops).
 
 Installing a driver or changing a Windows service from the child still changes
@@ -70,3 +73,12 @@ Changing Sunshine to Apollo/VibePollo cannot remove Windows session/input limits
 VibePollo child coexistence is still unverified and intentionally refused by this
 build; it needs its own adapter/integration work before independent child startup
 can be claimed.
+## Viewer sizing
+
+Resizing/maximizing ChildStream requests a child resolution matching the desktop
+preview area after a short debounce. The initial resolution in `display.cfg`
+is used for connection startup; its scale remains in effect afterward. The viewer
+has no extra internal padding. If Windows rejects dynamic display updates, the
+current resolution stays connected and is scaled proportionally, with a notice.
+A streaming host may need its own display/capture refresh after a resolution
+change; remote video acceptance must be tested on the chosen host/client.

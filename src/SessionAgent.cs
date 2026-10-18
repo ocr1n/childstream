@@ -242,7 +242,7 @@ static class SessionAgent
                         string command = PipeProtocol.ReadText(pipe, 2000);
                         AgentReply reply;
                         try { reply = service.Handle(AgentCodec.DecodeRequest(command)); }
-                        catch (InvalidDataException) { reply = new AgentReply { Status = new HostSnapshot(HostState.Unavailable, "Helper upgrade/repair required. This helper requires protocol version 2.", 0) }; }
+                        catch (InvalidDataException) { reply = new AgentReply { Status = new HostSnapshot(HostState.Unavailable, "Helper upgrade/repair required. This helper requires protocol version 3.", 0) }; }
                         PipeProtocol.WriteText(pipe, AgentCodec.Encode(reply), 2000);
                     }
                     catch (Exception ex) { Log(baseDirectory, "helper request failed: " + ex.Message); }

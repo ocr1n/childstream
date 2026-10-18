@@ -34,7 +34,7 @@ sealed class ThemeChoiceButton : Button
 {
     public readonly AppTheme PreviewTheme;
     AppTheme chrome;
-    bool selected;
+    bool selected, hovered;
     public bool SelectedChoice { get { return selected; } }
     public ThemeChoiceButton(AppTheme preview)
     {
@@ -45,11 +45,13 @@ sealed class ThemeChoiceButton : Button
         chrome = AppTheme.Effective(active, SystemInformation.HighContrast); selected = active.Id == PreviewTheme.Id;
         AccessibleDescription = selected ? "Selected theme. Applied and saved automatically." : "Apply this theme immediately."; Invalidate();
     }
+    protected override void OnMouseEnter(EventArgs e) { base.OnMouseEnter(e); hovered = true; Invalidate(); }
+    protected override void OnMouseLeave(EventArgs e) { base.OnMouseLeave(e); hovered = false; Invalidate(); }
     protected override void OnPaint(PaintEventArgs e) {
-        e.Graphics.Clear(chrome.Surface);
+        e.Graphics.Clear(hovered ? chrome.Quiet : chrome.Surface);
         var preview = new Rectangle(4, 4, Math.Max(1, Width - 8), Math.Max(1, Height - Font.Height - 22));
         ThemeThumbnail.Draw(e.Graphics, preview, PreviewTheme);
-        if (selected || (Focused && ShowFocusCues)) using (var pen = new Pen(chrome.Focus, 2)) e.Graphics.DrawRectangle(pen, 1, 1, Width - 3, Height - 3);
+        if (selected || hovered || (Focused && ShowFocusCues)) using (var pen = new Pen(chrome.Focus, 2)) e.Graphics.DrawRectangle(pen, 1, 1, Width - 3, Height - 3);
         TextRenderer.DrawText(e.Graphics, Text, Font, new Rectangle(7, preview.Bottom + 7, Width - 30, Font.Height + 4), chrome.Text, TextFormatFlags.Left | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
         if (selected) using (var brush = new SolidBrush(chrome.Focus)) e.Graphics.FillEllipse(brush, Width - 18, preview.Bottom + 11, 7, 7);
     }
@@ -80,7 +82,7 @@ sealed class ThemePickerWindow : Form
             choices.Controls.Add(choice);
         }
         choices.Resize += delegate { FitChoices(); };
-        var close = new ThemedButton { Text = "Close", AccessibleName = "Close themes", AutoSize = true, MinimumSize = new Size(90, 32), Anchor = AnchorStyles.Right, Margin = new Padding(0, 12, 0, 0), DialogResult = DialogResult.Cancel };
+        var close = new ThemedButton { Text = "Close", AccessibleName = "Close themes", AutoSize = true, MinimumSize = new Size(90, 40), Anchor = AnchorStyles.Right, Margin = new Padding(0, 12, 0, 0), DialogResult = DialogResult.Cancel };
         close.Click += delegate { Close(); }; CancelButton = close; layout.Controls.Add(close, 0, 2);
         SetTheme(selected); Shown += delegate { FitChoices(); foreach (ThemeChoiceButton button in choices.Controls) if (button.SelectedChoice) { button.Select(); break; } };
     }

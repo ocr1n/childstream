@@ -12,7 +12,7 @@ static class ChildBrowser
         if (app.Kind != ChildAppKind.Chrome && app.Kind != ChildAppKind.Edge) throw new ArgumentException("Choose Chrome or Edge.");
         if (session == expectedChild && PeerIdentity.IsHelperSession(session, session, console)) return ChildAppLauncher.Build(app, localData);
         ChildAppCatalog.ValidatePath(app.ExecutablePath);
-        if (new ChildApp(app.ExecutablePath, app.Kind).Id != app.Id) throw new IOException("The browser changed. Choose it again.");
+        if (!app.IsCurrent()) throw new IOException("The browser changed. Choose it again.");
         return new AppLaunchSpec(app.ExecutablePath, new string[0], Path.GetDirectoryName(app.ExecutablePath), app.Kind);
     }
     public static ChildApp Resolve(ChildAppKind kind, IAppDiscoverySource source) {

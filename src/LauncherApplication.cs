@@ -15,6 +15,9 @@ sealed class LauncherApplication : IDisposable
     readonly HostPromptPolicy prompts = new HostPromptPolicy();
     readonly Stopwatch clock = Stopwatch.StartNew();
     readonly Timer timer = new Timer { Interval = 2000 };
+    readonly Timer displayTimer = new Timer { Interval = 250 };
+    RdpViewport viewport; long resizeAfter;
+    AgentRequest pendingApps; ChildAppWindow pendingPicker; uint pendingAppsChild; int pendingAppsToken;
     readonly NotifyIcon tray;
     readonly ContextMenuStrip menu = new ContextMenuStrip();
     RdpBox rdp;
@@ -76,9 +79,17 @@ sealed class LauncherApplication : IDisposable
             if (window.WindowState != FormWindowState.Minimized) return;
             window.Hide(); tray.ShowBalloonTip(1500, "ChildStream", "Still attached. Double-click the tray icon to restore the viewer.", ToolTipIcon.Info);
         };
-        window.FormClosing += delegate { ending = true; wantReconnect = false; requests.Close(); timer.Stop(); tray.Visible = false; };
+        window.FormClosing += delegate { displayTimer.Stop(); ending = true; wantReconnect = false; requests.Close(); timer.Stop(); tray.Visible = false; };
         window.Shown += delegate { DiscoverBeforeConnect(); };
         timer.Tick += delegate { Poll(); };
+        viewport = new RdpViewport((width, height) => {
+            if (!StillConnected(child)) throw new IOException("The attached child desktop changed.");
+            ocx.UpdateSessionDisplaySettings((uint)width, (uint)height, 0u, 0u, 0u, scale.DesktopScale, scale.DeviceScale);
+        }, message => { Program.Log(message); window.SetNotice(message); }, () => clock.ElapsedMilliseconds);
+        displayTimer.Tick += delegate {
+            if (ending || rdp == null || clock.ElapsedMilliseconds < resizeAfter || window.WindowState == FormWindowState.Minimized) return;
+            viewport.Fit(child, StillConnected(child), rdp.ClientSize.Width, rdp.ClientSize.Height);
+        };
         bool enabled;
         bool known = Program.ChildSessionsEnabled(out enabled);
         setupReady = known && enabled;
@@ -89,7 +100,7 @@ sealed class LauncherApplication : IDisposable
         }
     }
 
-    public int Run() { timer.Start(); Application.Run(window); return 0; }
+    public int Run() { timer.Start(); displayTimer.Start(); Application.Run(window); return 0; }
     void Show() { window.Show(); window.WindowState = FormWindowState.Normal; window.Activate(); }
     bool TryOpen(string target)
     {
@@ -121,7 +132,7 @@ sealed class LauncherApplication : IDisposable
         }
         try {
             if (rdp == null) {
-                rdp = new RdpBox(); window.AttachViewer(rdp); rdp.CreateControl(); ocx = rdp.Ocx;
+                rdp = new RdpBox(); rdp.ClientSizeChanged += delegate { resizeAfter = clock.ElapsedMilliseconds + 250; }; window.AttachViewer(rdp); rdp.CreateControl(); ocx = rdp.Ocx;
                 scale = new RdpScaleSettings(name => { object value; ((IMsRdpExtendedSettings)rdp.Ocx).get_Property(name, out value); return value; }, (name, value) => { ((IMsRdpExtendedSettings)rdp.Ocx).put_Property(name, ref value); });
             }
             ocx.Server = "localhost"; ocx.UserName = account; ocx.AdvancedSettings2.ClearTextPassword = password;
@@ -148,7 +159,7 @@ sealed class LauncherApplication : IDisposable
     void Reconnect()
     {
         if (ending || !setupReady) return;
-        requests.Update(0, false); child = 0;
+        requests.Update(0, false); child = 0; viewport.Fit(0, false, 0, 0);
         try { if (State() != 0) { wantReconnect = true; ocx.Disconnect(); lastAttempt = clock.ElapsedMilliseconds - 6001; } else Connect(); }
         catch (Exception ex) { window.SetNotice("Reconnect failed: " + ex.Message); }
     }
@@ -163,6 +174,7 @@ sealed class LauncherApplication : IDisposable
         HostSnapshot pending = LauncherPolicy.ForSession(host, child, actual);
         if (!Object.ReferenceEquals(host, pending)) { host = pending; window.SetHost(host); }
         requests.Update(actual, state == 1 && actual != 0); child = actual;
+        if (state != 1 || child == 0) viewport.Fit(0, false, 0, 0);
         if (appWindow != null && !appWindow.IsDisposed) appWindow.SetAvailable(actual != 0 && state == 1);
         if (state == 1) window.SetSession("Connected", "The child desktop is attached. You can keep using your physical desktop.", true, true);
         else if (state != 0) window.SetSession("Connecting...", "Windows is opening the second desktop.", false, true);
@@ -189,7 +201,7 @@ sealed class LauncherApplication : IDisposable
             }
         }
         catch (Exception ex) { if (!window.IsDisposed && !ending) window.SetNotice("Host check failed: " + ex.Message); }
-        finally { inFlight = false; SetBusy(false); }
+        finally { inFlight = false; SetBusy(false); DrainApps(); }
         if (ask && !ending && !window.IsDisposed) ConfirmStart();
     }
     void ConfirmStart()
@@ -245,24 +257,36 @@ sealed class LauncherApplication : IDisposable
     void OpenApps() {
         if (!StillConnected(child)) return;
         if (appWindow != null && !appWindow.IsDisposed) { appWindow.Activate(); return; }
-        appWindow = new ChildAppWindow(); appWindow.SetTheme(window.Theme); appWindow.RefreshRequested += delegate { RequestApps(new AgentRequest { Command = "LIST_APPS" }); };
-        appWindow.LaunchRequested += id => RequestApps(new AgentRequest { Command = "LAUNCH_APP", AppId = id });
+        appWindow = new ChildAppWindow(); appWindow.SetTheme(window.Theme);
+        appWindow.LookupRequested += (query, offset, refresh) => RequestApps(new AgentRequest { Command = "LIST_APPS", Query = query, Offset = offset, RefreshCatalog = refresh });
+        appWindow.LaunchRequested += id => RequestApps(new AgentRequest { Command = "LAUNCH_APP", AppId = id, Query = appWindow.Query, Offset = appWindow.Offset });
+        appWindow.AdministratorRequested += id => RequestApps(new AgentRequest { Command = "LAUNCH_APP_ADMIN", AppId = id, Query = appWindow.Query, Offset = appWindow.Offset });
         appWindow.BrowseRequested += delegate {
             var approval = new SessionConfirmation(requests, child);
             using (var picker = new OpenFileDialog { Title = "Choose an installed app or game", Filter = "Windows application (*.exe)|*.exe", CheckFileExists = true })
-                if (ShowPicker(picker, appWindow) == DialogResult.OK && approval.CanProceed(child) && StillConnected(child)) RequestApps(new AgentRequest { Command = "REGISTER_APP", ExecutablePath = picker.FileName });
+                if (ShowPicker(picker, appWindow) == DialogResult.OK && approval.CanProceed(child) && StillConnected(child)) { appWindow.ResetSearch(); RequestApps(new AgentRequest { Command = "REGISTER_APP", ExecutablePath = picker.FileName }); }
         };
         appWindow.SetBusy(inFlight); appWindow.Show(window); RequestApps(new AgentRequest { Command = "LIST_APPS" });
     }
     async void RequestApps(AgentRequest request) {
         if (ending || appWindow == null || appWindow.IsDisposed || !StillConnected(child)) return;
-        if (inFlight) { appWindow.SetBusy(true); appWindow.SetMessage("A host/app check is in progress. Try again when it finishes."); return; }
-        uint target = child; int token = requests.Generation; var picker = appWindow; inFlight = true; SetBusy(true);
+        if (inFlight) {
+            if (request.Command == "LIST_APPS") { pendingApps = request; pendingAppsChild = child; pendingAppsToken = requests.ConnectionGeneration; pendingPicker = appWindow; }
+            return;
+        }
+        uint target = child; int token = requests.ConnectionGeneration; var picker = appWindow; inFlight = true; SetBusy(true);
         try {
             AgentReply reply = await Task.Run(() => client.Request(target, request));
-            if (!picker.IsDisposed && requests.Accepts(token, target) && StillConnected(target)) picker.SetApps(reply.Apps, reply.Status.State == HostState.Unavailable ? reply.Status.Message : reply.Diagnostic);
-        } catch (Exception ex) { if (!picker.IsDisposed) picker.SetMessage(ex.Message); }
-        finally { inFlight = false; SetBusy(false); }
+            if (!picker.IsDisposed && requests.AcceptsConnection(token, target) && StillConnected(target)) {
+                picker.SetPage(reply, request.Query, request.Offset);
+                if (!picker.Matches(request.Query, request.Offset) && request.Command != "LIST_APPS" && reply.Diagnostic.Length != 0) picker.SetMessage(reply.Diagnostic);
+            }
+        } catch (Exception ex) { if (!picker.IsDisposed && requests.AcceptsConnection(token, target) && picker.Matches(request.Query, request.Offset)) picker.LookupFailed(ex.Message); }
+        finally { inFlight = false; SetBusy(false); DrainApps(); }
+    }
+    void DrainApps() {
+        var request = pendingApps; var picker = pendingPicker; pendingApps = null; pendingPicker = null;
+        if (request != null && picker == appWindow && !picker.IsDisposed && requests.AcceptsConnection(pendingAppsToken, pendingAppsChild) && picker.Matches(request.Query, request.Offset) && StillConnected(pendingAppsChild)) RequestApps(request);
     }
     void EndSession()
     {
@@ -287,5 +311,5 @@ sealed class LauncherApplication : IDisposable
             MessageBox.Show(window, "Could not sign out the child desktop.\n" + ex.Message, "ChildStream", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
-    public void Dispose() { requests.Close(); timer.Dispose(); tray.Dispose(); menu.Dispose(); window.Dispose(); }
+    public void Dispose() { requests.Close(); timer.Dispose(); displayTimer.Dispose(); tray.Dispose(); menu.Dispose(); window.Dispose(); }
 }

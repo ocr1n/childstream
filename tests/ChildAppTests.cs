@@ -51,7 +51,7 @@ static class ChildAppTests
         });
         check("browsed apps remain visible ahead of a full discovered catalog", delegate {
             Directory.CreateDirectory(root); try {
-                var paths = Enumerable.Range(0, 21).Select(i => Path.Combine(root, "app-" + i + ".exe")).ToArray();
+                var paths = Enumerable.Range(0, 261).Select(i => Path.Combine(root, "app-" + i + ".exe")).ToArray();
                 foreach (string path in paths) File.WriteAllText(path, "fixture");
                 ChildAppCatalog.SaveRegistered(Path.Combine(root, "child-apps.txt"), paths.Skip(4).Take(12));
                 var source = new FixedApps(paths.Take(4).Select(ChildAppCatalog.Register).ToArray());
@@ -59,11 +59,11 @@ static class ChildAppTests
                 var reply = service.Handle(new AgentRequest { Command = "REGISTER_APP", ExecutablePath = paths[16] });
                 Assert(reply.Apps.Length > 0 && reply.Apps[0].Path == paths[16], "browsed app was hidden behind discovered apps");
                 Assert(ChildAppCatalog.LoadRegistered(Path.Combine(root, "child-apps.txt"))[0] == paths[16], "browse priority did not persist");
-                ChildAppCatalog.SaveRegistered(Path.Combine(root, "child-apps.txt"), paths.Skip(4).Take(16));
-                reply = service.Handle(new AgentRequest { Command = "REGISTER_APP", ExecutablePath = paths[19] });
-                Assert(reply.Apps[0].Path == paths[19] && ChildAppCatalog.LoadRegistered(Path.Combine(root, "child-apps.txt")).Length == 16, "reselecting a full catalog failed");
-                reply = service.Handle(new AgentRequest { Command = "REGISTER_APP", ExecutablePath = paths[20] });
-                Assert(reply.Diagnostic.Contains("full") && ChildAppCatalog.LoadRegistered(Path.Combine(root, "child-apps.txt")).Length == 16, "full catalog silently changed");
+                ChildAppCatalog.SaveRegistered(Path.Combine(root, "child-apps.txt"), paths.Skip(4).Take(256));
+                reply = service.Handle(new AgentRequest { Command = "REGISTER_APP", ExecutablePath = paths[259] });
+                Assert(reply.Apps[0].Path == paths[259] && ChildAppCatalog.LoadRegistered(Path.Combine(root, "child-apps.txt")).Length == 256, "reselecting a full catalog failed");
+                reply = service.Handle(new AgentRequest { Command = "REGISTER_APP", ExecutablePath = paths[260] });
+                Assert(reply.Diagnostic.Contains("full") && ChildAppCatalog.LoadRegistered(Path.Combine(root, "child-apps.txt")).Length == 256, "full catalog silently changed");
                 AgentCodec.Encode(reply);
             } finally { Directory.Delete(root, true); }
         });

@@ -28,10 +28,13 @@ This is an experimental same-user Windows session, not a virtual machine.
   you handle Windows elevation there.
 - **Recover a missing helper.** The launcher attempts a bounded, session-specific
   restart without signing out the child or closing games.
-- **Open apps in the child.** Chrome/Edge use persistent independent profiles.
-  Browse to installed apps or games; Steam reports main-session conflicts.
-- **Keep controls simple.** Status, pairing addresses, reconnect, tray controls,
-  readable diagnostics, and six themes with miniature window previews.
+- **Find and open installed apps.** Search Windows app registrations and Start
+  menu shortcuts, or Browse to a portable app. Choose normal or administrator
+  startup inside the child; Steam reports main-session conflicts.
+- **Fit your workspace.** Maximizing or resizing requests a matching child display
+  resolution, with proportional scaling if Windows cannot apply it.
+- **Keep controls clear.** Visible hover/pressed/focus states, pairing addresses,
+  reconnect, tray controls and six themes with miniature window previews.
 
 ## Requirements
 
@@ -101,19 +104,31 @@ child's settings page. See the [complete pairing guide](docs/pairing.md).
 
 ## Apps, themes and controls
 
-App discovery reads Windows App Paths, supported uninstall records and Steam's
-registered location in both per-user and system 32/64-bit views. It also checks
-running executable paths, Steam libraries/app manifests and standard OS folders.
-These are resolved on your PC, with no developer-specific drive or username.
-Unregistered portable apps need Browse once; the saved executable path is reused
-by app discovery and the child browser shortcut. If an app moves without updating
-its registrations, Browse to the new location rather than relying on a guessed path.
+**Open app** searches installed desktop apps, including programs such as Blender
+and Microsoft Office when registered with Windows. Discovery reads per-user and
+system Start menu shortcuts, all App Paths registrations (32/64-bit views),
+supported uninstall records, Steam libraries/manifests and running app paths.
+Locations come from this PC's registrations and OS folders; no developer-specific
+drive or username is required. Search matches app names and executable paths.
 
-**Open app** lists detected browsers, Steam and Wallpaper Engine. **Browse app...**
-adds a local installed EXE. Registered apps take priority, newest choice first.
-Up to 16 registrations are saved; long paths can reduce the displayed list.
-Browse an existing app again to bring it forward. Shortcuts, scripts, shell
-commands and arbitrary launch flags are not accepted.
+Results are paged so long or non-English paths cannot hide the rest of the list.
+Up to 4,096 candidates and 256 browsed executable locations are supported. Browsed
+apps appear first. **Refresh** rescans registrations; ordinary results are cached
+for up to 30 seconds. Use **Browse app...** for an unregistered portable app or an
+app moved without updating its registration. Select its actual installed EXE.
+
+Normal EXE Start menu shortcuts retain their app arguments and working directory.
+Browser shortcuts instead use the separate child browser data. Script/shell
+runners, network executables, Store/UWP links and advertised installer shortcuts
+are not offered as general launch targets. Browsing accepts EXEs, not command
+text, scripts or arbitrary flags. Discovery and dispatch cannot guarantee that an
+app renders correctly or avoids its own single-instance and licensing rules.
+
+Select an app and choose **Open in child**. If it needs elevation, explicitly
+choose **Run as administrator**, then approve Windows consent in the child
+preview. A pending prompt is reported without freezing helper status or replaying
+the launch. Canceling consent does not attempt another launch. Secure-desktop
+control from Moonlight still depends on the host; use the local preview if needed.
 
 Child Chrome/Edge use `%LOCALAPPDATA%\ChildStream\Chrome-Child` and `Edge-Child`.
 Main Chrome can stay open. Ordinary Chrome icons and URL handlers still use its
@@ -121,11 +136,14 @@ main profile; use **Open app** or the explicit child browser shortcut. Profiles
 are not merged automatically. Sign in and enable browser sync yourself if wanted.
 
 Exit Steam on the main desktop before opening it in the child. ChildStream reports
-the conflict rather than terminating it. Use normal game launchers when required.
+the conflict rather than terminating it. Games and UAC prompts started by main-desktop Steam can remain there. Use the
+child Steam instance and normal game launchers when required. The administrator
+action cannot move an already-running launcher or bypass anti-cheat.
 Wallpaper Engine can share settings; check the child's display mapping first.
 
 | Control | Behavior |
 | --- | --- |
+| **Resize / maximize** | Updates the child resolution to the preview area while retaining the configured display scale; no forced reconnect. |
 | **Themes** | Light, Dark, Ocean, Sunset, Forest or Rose, with a saved preference. Windows high contrast takes precedence. |
 | **Details** | Wrapped, scrollable diagnostics without long native hover strips. |
 | **Reconnect** | Reattaches without signing out the child. |
@@ -155,7 +173,10 @@ The installation record and separate browser data live under
 
 Optional `display.cfg` accepts `widthxheight` or `widthxheightxscale`, for example
 `2800x1272x225`. Dimensions: 200–8192; scale: 100–500 percent, or 0 for no override.
-Invalid input falls back to 1920×1080 without a scale override. Hardware limits may be stricter.
+Invalid input falls back to 1920×1080 without a scale override. After connecting,
+resolution follows the preview area; the scale preference stays in effect. RDP
+requires an even display width, so an odd viewport is rounded down by one pixel.
+Hardware limits may be stricter.
 
 ## Build from source
 

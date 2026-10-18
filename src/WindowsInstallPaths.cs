@@ -30,6 +30,9 @@ static class WindowsInstallPaths
     }
     public static string[] RegistryExecutables(RegistryKey software, string[] names) {
         var result = new List<string>(); if (software == null) return result.ToArray();
+        if (names == null) {
+            using (var paths = software.OpenSubKey(@"Microsoft\Windows\CurrentVersion\App Paths")) names = paths == null ? new string[0] : paths.GetSubKeyNames().Take(4096).ToArray();
+        }
         foreach (string name in names) {
             try { using (var key = software.OpenSubKey(@"Microsoft\Windows\CurrentVersion\App Paths\" + name)) if (key != null) AddFile(result, key.GetValue("") as string); }
             catch (SecurityException) { } catch (UnauthorizedAccessException) { } catch (IOException) { }
@@ -37,7 +40,7 @@ static class WindowsInstallPaths
         return result.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
     }
     public static string[] RegistryApps(RegistryKey software) {
-        var result = new List<string>(RegistryExecutables(software, new[] { "chrome.exe", "msedge.exe", "steam.exe", "wallpaper64.exe", "wallpaper32.exe" }));
+        var result = new List<string>(RegistryExecutables(software, null));
         if (software == null) return result.ToArray();
         try { using (var steam = software.OpenSubKey(@"Valve\Steam")) if (steam != null) {
             AddFile(result, steam.GetValue("SteamExe") as string);
@@ -99,6 +102,6 @@ static class WindowsInstallPaths
             AddDirectory(paths, folder, @"Google\Chrome\Application\chrome.exe", @"Microsoft\Edge\Application\msedge.exe", @"Steam\steam.exe");
         }
         foreach (string steam in paths.Where(path => string.Equals(Path.GetFileName(path), "steam.exe", StringComparison.OrdinalIgnoreCase)).Distinct(StringComparer.OrdinalIgnoreCase).ToArray()) paths.AddRange(SteamApps(steam));
-        return paths.Distinct(StringComparer.OrdinalIgnoreCase).Take(256).ToArray();
+        return paths.Distinct(StringComparer.OrdinalIgnoreCase).Take(ChildAppCatalog.MaxApps).ToArray();
     }
 }

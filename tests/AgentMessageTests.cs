@@ -14,17 +14,17 @@ static class AgentMessageTests
         public HostFileMetadata Inspect(string path) { return new HostFileMetadata("Sunshine", "Sunshine", Version, Version); }
     }
     public static void Run(Action<string, Action> check) {
-        check("v2 request and reply preserve Unicode paths and typed host identity", delegate {
+        check("v3 request and reply preserve Unicode paths and typed host identity", delegate {
             var request = new AgentRequest { Command = "REGISTER_APP", ExecutablePath = @"C:\Games & tools\日本語 app.exe" };
             Assert(AgentCodec.DecodeRequest(AgentCodec.Encode(request)).ExecutablePath == request.ExecutablePath, "native path changed");
             var reply = new AgentReply { SelectionId = new string('a', 64), Status = new HostSnapshot(HostState.Stopped, "✓ off", 48989), Hosts = new[] { new AgentHost { Id = new string('b', 64), Name = "Sunshine", Path = @"C:\日本語\sunshine.exe", Version = "2026.1" } } };
             var decoded = AgentCodec.DecodeReply(AgentCodec.Encode(reply)); Assert(decoded.Hosts[0].Path == reply.Hosts[0].Path && decoded.Status.Message == "✓ off", "reply changed");
         });
-        check("v2 rejects old versions unknown commands fields types and oversized payloads", delegate {
-            foreach (string json in new[] { "{}", "{\"Version\":1,\"Command\":\"STATUS\"}", "{\"Version\":2,\"Command\":\"START evil\"}", "{\"Version\":2,\"Command\":\"STATUS\",\"Extra\":1}", "{\"Version\":2,\"Command\":7}", "{\"Version\":2,\"Command\":\"STATUS\",\"SelectionId\":false}", "{\"Version\":2,\"Command\":\"STATUS\"", "[]", "null" }) Assert(Refused(() => AgentCodec.DecodeRequest(json)), "invalid request accepted: " + json);
+        check("v3 rejects old versions unknown commands fields types and oversized payloads", delegate {
+            foreach (string json in new[] { "{}", "{\"Version\":1,\"Command\":\"STATUS\"}", "{\"Version\":3,\"Command\":\"START evil\"}", "{\"Version\":3,\"Command\":\"STATUS\",\"Extra\":1}", "{\"Version\":3,\"Command\":7}", "{\"Version\":3,\"Command\":\"STATUS\",\"SelectionId\":false}", "{\"Version\":3,\"Command\":\"STATUS\"", "[]", "null" }) Assert(Refused(() => AgentCodec.DecodeRequest(json)), "invalid request accepted: " + json);
             Assert(Refused(() => AgentCodec.Encode(new AgentRequest { Command = "REGISTER_APP", ExecutablePath = new string('x', 2049) })), "oversized path accepted");
             Assert(Refused(() => AgentCodec.DecodeReply("1|Missing|0|")), "old helper accepted without upgrade");
-            Assert(Refused(() => AgentCodec.DecodeReply("{\"Version\":2,\"State\":\"999\",\"Port\":0}")), "invalid enum accepted");
+            Assert(Refused(() => AgentCodec.DecodeReply("{\"Version\":3,\"State\":\"999\",\"Port\":0}")), "invalid enum accepted");
         });
         check("host selection changes expire confirmation on the same child connection", delegate {
             var gate = new SessionRequestGate(); gate.Update(7, true); gate.Select("first"); var confirmation = new SessionConfirmation(gate, 7); int token = gate.Generation;

@@ -72,13 +72,15 @@ sealed class SessionRequestGate
     bool closed;
     string selection;
     public int Generation { get; private set; }
+    public int ConnectionGeneration { get; private set; }
     public void Update(uint session, bool attached)
     {
-        if (child != session || connected != attached) { child = session; connected = attached; Generation++; }
+        if (child != session || connected != attached) { child = session; connected = attached; Generation++; ConnectionGeneration++; }
     }
     public bool Accepts(int generation, uint session) { return !closed && connected && session == child && generation == Generation; }
+    public bool AcceptsConnection(int generation, uint session) { return !closed && connected && session == child && generation == ConnectionGeneration; }
     public void Select(string identity) { if (selection != identity) { selection = identity; Generation++; } }
-    public void Close() { closed = true; Generation++; }
+    public void Close() { closed = true; Generation++; ConnectionGeneration++; }
 }
 
 // A modal dialog pumps timer events. Its approval belongs to the connection that

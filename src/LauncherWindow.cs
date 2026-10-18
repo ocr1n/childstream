@@ -58,21 +58,29 @@ sealed class LauncherWindow : Form
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 300)); layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         Controls.Add(layout); layout.BringToFront();
         var scroll = new Panel { Dock = DockStyle.Fill, AutoScroll = true, BackColor = SystemColors.Window, Margin = Padding.Empty };
-        var rail = new TableLayoutPanel { Dock = DockStyle.Top, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, ColumnCount = 1, Padding = new Padding(24, 22, 24, 22), Margin = Padding.Empty };
+        var rail = new TableLayoutPanel { Dock = DockStyle.Top, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, ColumnCount = 1, Padding = new Padding(22, 20, 22, 20), Margin = Padding.Empty };
         rail.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         scroll.Controls.Add(rail); layout.Controls.Add(scroll, 0, 0);
         Action<Control> add = control => { int row = rail.RowCount++; rail.RowStyles.Add(new RowStyle(SizeType.AutoSize)); rail.Controls.Add(control, 0, row); };
-        add(Label("ChildStream", 21, FontStyle.Bold, ink, 0, 22));
+        add(Label("ChildStream", 20, FontStyle.Bold, ink, 0, 18));
         add(Label("Second desktop", 10, FontStyle.Bold, muted, 0, 5));
         sessionTitle = Label("Not connected", 14, FontStyle.Bold, ink, 0, 6); add(sessionTitle);
         sessionDetail = Label("Start a separate desktop for your stream. Keep this viewer attached while playing.", 9.5f, FontStyle.Regular, muted, 0, 12); add(sessionDetail);
         desktop = Button("&Start desktop", true, (s, e) => Raise(ConnectRequested)); add(desktop);
         reconnect = Button("&Reconnect", false, (s, e) => Raise(ReconnectRequested)); reconnect.Enabled = false; add(reconnect);
-        add(new Panel { Tag = "divider", Height = 1, Dock = DockStyle.Top, BackColor = SystemInformation.HighContrast ? SystemColors.WindowText : Color.FromArgb(217, 226, 236), Margin = new Padding(0, 17, 0, 17) });
+        add(new Panel { Tag = "divider", Height = 1, Dock = DockStyle.Top, BackColor = SystemInformation.HighContrast ? SystemColors.WindowText : Color.FromArgb(217, 226, 236), Margin = new Padding(0, 12, 0, 12) });
         add(Label("Streaming host", 10, FontStyle.Bold, muted, 0, 5));
         hostTitle = Label("Waiting for desktop", 14, FontStyle.Bold, ink, 0, 6); add(hostTitle);
         hostDetail = Label(host.Message, 9.5f, FontStyle.Regular, muted, 0, 12);
-        hostChoice = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Dock = DockStyle.Top, Width = 240, DropDownWidth = 640, AccessibleName = "Streaming host installation", Margin = new Padding(0, 0, 6, 8), Visible = false };
+        hostChoice = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, FlatStyle = FlatStyle.Flat, DrawMode = DrawMode.OwnerDrawFixed, ItemHeight = Font.Height + 8, Dock = DockStyle.Top, Width = 240, DropDownWidth = 640, AccessibleName = "Streaming host installation", Margin = new Padding(0, 0, 6, 8), Visible = false };
+        hostChoice.DrawItem += delegate(object sender, DrawItemEventArgs e) {
+            var colors = AppTheme.Effective(theme, SystemInformation.HighContrast);
+            bool selected = (e.State & DrawItemState.Selected) != 0;
+            using (var brush = new SolidBrush(selected ? colors.Accent : colors.Inset)) e.Graphics.FillRectangle(brush, e.Bounds);
+            string text = e.Index >= 0 && e.Index < hostChoice.Items.Count ? hostChoice.Items[e.Index].ToString() : hostChoice.Text;
+            TextRenderer.DrawText(e.Graphics, text, e.Font, Rectangle.Inflate(e.Bounds, -6, 0), selected ? colors.OnAccent : colors.Text, TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
+            e.DrawFocusRectangle();
+        };
         hostChoice.SelectionChangeCommitted += delegate { var choice = hostChoice.SelectedItem as HostChoice; if (choice != null && HostSelected != null) HostSelected(choice.Id); }; add(hostChoice);
         var hostTools = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Top, WrapContents = true, Margin = Padding.Empty };
         refreshHosts = Button("Refresh", false, (s, e) => Raise(RefreshHostsRequested)); refreshHosts.AccessibleName = "Refresh hosts";
@@ -105,19 +113,13 @@ sealed class LauncherWindow : Form
             catch (Exception) { SetNotice("Clipboard is busy. Select and copy the Host web UI URL manually."); }
         }); copySettings.Dock = DockStyle.None;
 
-        var right = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 3, ColumnCount = 1, Padding = new Padding(24), Margin = Padding.Empty, Tag = "canvas" };
+        var right = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 3, ColumnCount = 1, Padding = new Padding(18), Margin = Padding.Empty, Tag = "canvas" };
         right.RowStyles.Add(new RowStyle(SizeType.AutoSize)); right.RowStyles.Add(new RowStyle(SizeType.Percent, 100)); right.RowStyles.Add(new RowStyle(SizeType.AutoSize)); layout.Controls.Add(right, 1, 0);
-        var tools = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, WrapContents = true, Tag = "canvas", Margin = new Padding(0, 0, 0, 12) };
-        var workspaceHeading = Label("Desktop preview", 11, FontStyle.Bold, ink, 8, 8); tools.Controls.Add(workspaceHeading);
+        var tools = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, WrapContents = true, Tag = "canvas", Margin = new Padding(0, 0, 0, 12) };
         openApp = Button("Open &app", false, (s, e) => Raise(OpenAppRequested)); tools.Controls.Add(openApp);
         tools.Controls.Add(Button("Minimize to tray", false, (s, e) => Raise(MinimizeRequested)));
         var themes = Button("&Themes", false, (s, e) => ShowThemes((Control)s)); themes.Name = "Themes"; tools.Controls.Add(themes);
         endSession = Button("End session...", false, (s, e) => Raise(EndSessionRequested)); tools.Controls.Add(endSession); right.Controls.Add(tools, 0, 0);
-        tools.Resize += delegate {
-            int actionsWidth = 0;
-            foreach (Control action in tools.Controls) if (action != workspaceHeading) actionsWidth += action.GetPreferredSize(Size.Empty).Width + action.Margin.Horizontal;
-            workspaceHeading.Visible = tools.ClientSize.Width >= actionsWidth + workspaceHeading.GetPreferredSize(Size.Empty).Width + workspaceHeading.Margin.Horizontal;
-        };
         workspace = new Panel { Name = "DesktopWorkspace", AccessibleName = "Child desktop workspace", Dock = DockStyle.Fill, BackColor = SystemColors.Window, Margin = Padding.Empty };
         right.Controls.Add(workspace, 0, 1);
         placeholder = new Panel { Dock = DockStyle.Fill, Padding = new Padding(38), BackColor = SystemColors.Window, AutoScroll = true };
@@ -137,7 +139,7 @@ sealed class LauncherWindow : Form
         placeholder.Resize += delegate { fitGuidance(); }; Shown += delegate { fitGuidance(); };
         var pairing = new TableLayoutPanel { Name = "PairingPanel", Tag = "canvas", AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Dock = DockStyle.Top, ColumnCount = 3, RowCount = 4, Margin = new Padding(0, 12, 0, 0) };
         pairing.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 110)); pairing.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100)); pairing.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 96));
-        pairing.RowStyles.Add(new RowStyle(SizeType.Absolute, 40)); pairing.RowStyles.Add(new RowStyle(SizeType.Absolute, 40)); pairing.RowStyles.Add(new RowStyle(SizeType.AutoSize)); pairing.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        pairing.RowStyles.Add(new RowStyle(SizeType.Absolute, 46)); pairing.RowStyles.Add(new RowStyle(SizeType.Absolute, 46)); pairing.RowStyles.Add(new RowStyle(SizeType.AutoSize)); pairing.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         var clientLabel = Label("Client address", 9, FontStyle.Regular, muted, 0, 0); clientLabel.MaximumSize = Size.Empty; clientLabel.Anchor = AnchorStyles.Left; clientLabel.Margin = new Padding(0, 0, 8, 6);
         webLabel = Label("Host web UI", 9, FontStyle.Regular, muted, 0, 0); webLabel.MaximumSize = Size.Empty; webLabel.Anchor = AnchorStyles.Left; webLabel.Margin = new Padding(0, 0, 8, 6);
         copyAddress.Text = copySettings.Text = "Copy";
@@ -168,7 +170,7 @@ sealed class LauncherWindow : Form
     }
     Button Button(string text, bool primary, EventHandler action)
     {
-        var button = new ThemedButton { Text = text, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, MinimumSize = new Size(0, primary ? 38 : 32), Dock = DockStyle.Top, Padding = new Padding(10, 3, 10, 3), Margin = new Padding(0, 0, 6, 6), FlatStyle = SystemInformation.HighContrast ? FlatStyle.Standard : FlatStyle.Flat, UseVisualStyleBackColor = SystemInformation.HighContrast, AccessibleName = text.Replace("&", "") };
+        var button = new ThemedButton { Text = text, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, MinimumSize = new Size(0, 40), Dock = DockStyle.Top, Padding = new Padding(10, 3, 10, 3), Margin = new Padding(0, 0, 6, 6), FlatStyle = SystemInformation.HighContrast ? FlatStyle.Standard : FlatStyle.Flat, UseVisualStyleBackColor = SystemInformation.HighContrast, AccessibleName = text.Replace("&", "") };
         button.Tag = primary;
         button.EnabledChanged += delegate { StyleButton(button); };
         StyleButton(button);
@@ -246,7 +248,7 @@ sealed class LauncherWindow : Form
     }
     public void AttachViewer(Control viewer)
     {
-        viewer.Dock = DockStyle.Fill; workspace.Controls.Add(viewer); viewer.BringToFront();
+        viewer.Margin = viewer.Padding = Padding.Empty; viewer.Dock = DockStyle.Fill; workspace.Controls.Add(viewer); viewer.BringToFront();
     }
     static string Brief(string text, int length) {
         text = (text ?? "").Replace("\r", " ").Replace("\n", " ").Trim();

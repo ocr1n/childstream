@@ -75,6 +75,9 @@ sealed class RdpScaleSettings
         this.setProperty = setProperty;
     }
 
+    public uint DesktopScale { get { uint value; try { value = Convert.ToUInt32(getProperty("DesktopScaleFactor")); } catch { return 100; } return value >= 100 && value <= 500 ? value : 100; } }
+    public uint DeviceScale { get { uint value; try { value = Convert.ToUInt32(getProperty("DeviceScaleFactor")); } catch { return 100; } return value == 100 || value == 140 || value == 180 ? value : 100; } }
+
     public void Apply(int scale)
     {
         if (scale > 0)

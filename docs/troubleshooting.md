@@ -85,3 +85,23 @@ Restore Windows child-session/RDP preferences only to recorded previous values,
 after checking whether other software needs them. There is no automatic rollback.
 Older setups may have a common Startup `childstream-sunshine.cmd` or firewall
 rule `ChildStream Sunshine`; inspect ownership separately before removing one.
+
+## An app is missing, opens elsewhere, or waits for administrator consent
+
+Use **Open app**, search its name or path, and **Refresh** after installing it.
+Browse to the installed EXE if it has no App Paths or normal EXE Start menu entry.
+A portable app moved to another folder needs to be browsed again. Shell/script,
+Store/UWP and advertised installer shortcuts are not general app launch targets.
+
+An app can hand off to its existing same-user instance. In particular, exit main
+Steam yourself before opening child Steam and launching a game there. Running an
+EXE as administrator does not transfer an existing main-desktop window.
+
+Choose **Run as administrator** explicitly when needed. Check the local child
+preview for Windows consent. The app picker reports pending startup and disables
+repeat launches until it settles. ChildStream does not accept consent for you,
+disable UAC or guarantee that Moonlight can capture the protected desktop.
+
+After upgrading, the viewer and helper must both load the new EXE. A version-3
+helper cannot exchange app messages with an old viewer. Save child work and end
+that session normally before replacing the EXE; restart ChildStream afterward.

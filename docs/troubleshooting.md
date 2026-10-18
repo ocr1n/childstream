@@ -101,9 +101,9 @@ EXE as administrator does not transfer an existing main-desktop window.
 
 Choose **Run as administrator** explicitly when needed. Check the main desktop
 as well as the child preview for Windows consent. On the tested Windows build,
-Winver requested from the child still displayed its prompt on the main desktop;
-this also happened with an explicit child-owned parent window. Child preview
-consent placement is unresolved. The app picker reports pending startup and
+Winver requested from the child still displayed its prompt on the main desktop.
+The initial parent-window test was inconclusive because .NET ignored its handle.
+Child preview consent placement is unresolved. The app picker reports pending startup and
 disables repeat launches until it settles. Respond to Windows yourself. Canceling
 consent ends that request. ChildStream does not disable UAC or guarantee that
 Moonlight can capture the protected desktop.

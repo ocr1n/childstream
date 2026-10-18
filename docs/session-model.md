@@ -40,9 +40,10 @@ folder would reintroduce process/data conflicts.
 child helper. This does not guarantee where Windows displays consent. Live
 Winver tests on Windows 11 build 26300 displayed consent on the main desktop,
 even though the helper's normal and linked tokens, and the consent process,
-belonged to the child session. Supplying an explicit child-owned parent window
-did not change that result. Consent placement is unresolved on this PC; these
-tests do not establish a universal limitation across Windows builds.
+belonged to the child session. An initial parent-window test was inconclusive:
+.NET Framework ignores ErrorDialogParentHandle unless ErrorDialog is also true.
+Consent placement is unresolved on this PC; these tests do not establish a
+universal limitation across Windows builds.
 
 UAC normally switches to a protected Winlogon desktop. Keep the main desktop
 accessible to respond to Windows yourself. Only one app launch can remain pending

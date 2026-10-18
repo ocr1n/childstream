@@ -1,15 +1,27 @@
-# build artifacts / local runtime state
+# Build outputs and local diagnostics
 *.exe
+*.pdb
 *.log
 *.marker
-cred.bin
-monitors.csv
-sunshine-lite.zip
+*.tmp
+*.bak
+/dist/
 
-# local Sunshine install (downloaded by setup.ps1)
-Sunshine/
+# Private installation state; preserve locally when updating
+/cred.bin
+/appearance.cfg
+/display.cfg
+/host-selection.txt
+/child-apps.txt
+/monitors.csv
+/Hosts/
+/Sunshine/
+/sunshine-lite.zip
+*.lnk
 
-# dev leftovers (root copies only)
+# Local design/review caches and scratch files
+/.impeccable/
+/.superpowers/
 /ChildSessionLauncher*.cs
 /DuoPOCLauncher.cs
 /uac-retry.ps1

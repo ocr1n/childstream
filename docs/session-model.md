@@ -43,26 +43,22 @@ the normal child desktop without that prompt. The earlier description of a
 physical-main-desktop prompt was a misinterpretation. Helper and consent process
 session checks are consistent with the clarified observation.
 
-The current child host runs directly as administrator with `capture = wgc`.
-Sunshine's maintainer identifies service-based DXGI capture as its UAC-capable
-path. WGC and that service path are distinct; another parent-window handle or
-administrator launch alone does not add protected-screen streaming.
-[Sunshine's UAC discussion](https://github.com/LizardByte/Sunshine/issues/3487).
-
-A normal-user diagnostic successfully created a DXGI duplication interface for
-the child's attached display. It never acquired screen frames. This establishes
-ordinary-desktop API availability, not secure-desktop streaming or remote input.
-Microsoft restricts secure-desktop duplication to LOCAL_SYSTEM. Sunshine's stock
-service selects the active console session, so it cannot simply replace the
-current independent child host. A child-aware privileged capture/input design
-requires separate implementation and acceptance.
+Initialized Sunshine child profiles now use a demand SYSTEM host with DXGI
+capture, explicitly bound to the child session. This addresses the gap observed
+with the earlier administrator/WGC host: WGC showed consent in the local RDP
+preview while Moonlight kept showing the ordinary desktop. Microsoft restricts
+secure-desktop duplication to LOCAL_SYSTEM. The stock Sunshine service chooses
+the physical console, so ChildStream must bind its own token to the child.
+[Sunshine's UAC discussion](https://github.com/LizardByte/Sunshine/issues/3487),
 [DXGI access requirements](https://learn.microsoft.com/en-us/windows/win32/api/dxgi1_2/nf-dxgi1_2-idxgioutput1-duplicateoutput),
 [Sunshine service targeting](https://github.com/LizardByte/Sunshine/blob/master/tools/sunshinesvc.cpp).
 
-For now, respond to Windows yourself through the local ChildStream preview.
-Only one app launch can remain pending; status checks remain responsive and
-cancellation does not retry. No automatic consent, global UAC policy change or
-blanket elevation is used.
+First-use web-login setup remains WGC; quit that host and start it again through
+ChildStream after setting its credentials. For WGC or an unsupported host,
+respond to Windows yourself through the local ChildStream preview. With protected
+Sunshine capture running, the child prompt can appear through Moonlight. Only one
+app launch can remain pending; status checks remain responsive and cancellation
+does not retry. No automatic consent or global UAC policy change is used.
 
 Installing a driver or changing a Windows service from the child still changes
 the shared computer. More permission does not turn the child into an isolated OS.
@@ -98,3 +94,41 @@ under Windows and the streaming host/client's control. Automatic matching to the
 host PC's preview size was reverted because it interfered with client resolution
 selection. Different aspect ratios can leave letterboxing rather than stretching
 or cropping the image. No host display configuration is changed by this rollback.
+
+
+## Protected Sunshine capture
+
+The temporary SYSTEM/ddx test succeeded on 2026-10-18: the user connected a
+Moonlight PC client and saw and accepted Steam UAC in the streamed child desktop.
+The release routes initialized Sunshine child profiles through a demand service
+that binds its SYSTEM token to the exact child session. It never chooses the
+physical console as a fallback, changes UAC policy, or approves a prompt.
+
+This is capture/input support for the Windows protected desktop, not blanket
+administrator permission for applications. First-use web-login setup remains
+local WGC until Sunshine is quit and restarted through ChildStream. Apollo and
+VibePollo privileged capture remain unverified. The initial service approval is
+on the host PC's physical desktop. A temporary normal-user task starts the
+approval relay there and is deleted after acknowledgment. Its elevated parent
+supervisor survives child logoff to hold the profile lease through teardown and
+pairing commit. An alternate administrator account is not supported for this path.
+
+Pairing state, certificates and web credentials use protected, version-independent
+profile generations with a last-good backup. The active host works on a disposable
+copy; complete validated state commits atomically after its host/job stop. Changing
+the original child files afterward cannot silently replace the protected identity.
+
+The demand service is marked for deletion immediately and follows the exact
+viewer/helper/setup process lifetimes. There is no 20-minute release limit or
+automatic startup. A worker heartbeat is protected by administrator/SYSTEM write
+permissions; ordinary helpers use it because Windows refuses their native
+SYSTEM-process inspection. Stale or inconsistent evidence blocks duplicate starts.
+
+Use Moonlight's Desktop entry, then launch apps in the child. Upstream Sunshine's
+SYSTEM application helper selects the active physical console user. Desktop-only
+is the supported workflow; the Sunshine web UI can still add app commands, so it
+is not an enforced API restriction.
+
+The release implementation has automated policy, atomic-state and lifecycle
+checks. Its first human-approved live activation remains separate from the
+successful temporary feasibility test.

@@ -107,6 +107,7 @@ static class Program
     static int Main(string[] args)
     {
         string command = args.Length == 0 ? "" : args[0].ToLowerInvariant();
+        if (command == "-capture-setup" || command == "-capture-worker" || command == "-capture-request") return SecureCaptureRuntime.Execute(args);
         if (command == "-setup") return DesktopSetup.Run(baseDir, args.Length > 1 ? args[1] : null);
         if (command == "-agent") return SessionAgent.CanStart(args, HostNative.CurrentSession(), HostNative.WTSGetActiveConsoleSessionId()) ? SessionAgent.Run(baseDir) : 2;
         if (command == "-browser") return ChildBrowser.Open(args);

@@ -26,7 +26,7 @@ Test a default Desktop stream on the LAN first.
 | Steam and games | Steam library and Metro Exodus menu/loading rendered after a deliberate main-session handoff; user subsequently reported games working. | Concurrent same-user Steam, all games, launchers and anti-cheat are not certified. |
 | Wallpaper Engine | Child and main processes coexisted. | Playback/effects and monitor mapping are unverified; settings may be shared. |
 | Helper recovery | A deliberately stopped child helper recovered in about 2.6 seconds while both Sunshine hosts stayed running. | Task Scheduler policy, mismatched installations and outdated helpers can still need repair. |
-| Elevation | The user sees Windows consent in the local ChildStream RDP preview, while Moonlight does not show it. Automated tests cover child-bound runas, pending consent and cancellation. | The current administrator/WGC child host does not provide remote secure-desktop capture/input. Handle consent through the local preview. |
+| Elevation | User confirmed seeing and accepting Steam UAC through Moonlight with the temporary SYSTEM/ddx child host. Release code uses the same capture/token approach; automated checks cover guards, protected status and pairing generations. | Release activation still needs human consent/live acceptance. First-use WGC and Apollo lack this confirmation. Not a certification of every app, security UI, driver or client. |
 | General app discovery | Native metadata enumeration finds Office apps on the development PC. Fixtures cover Blender/Office at custom paths, EXE shortcuts, argument/working-directory preservation, search and byte-bounded pages. | Installed Blender/Office rendering and all portable/Store launchers are not certified. |
 | Maximize / resize | Viewer fills its workspace and uses proportional smart sizing. The automatic remote-resolution update was reverted after the user reported client resolution regressions. | Initial display/scale parsing remains tested. Client-selected resolutions need live recheck after the rollback; differing aspect ratios can leave letterboxing. |
 | UI/themes | Production-manifest native form checks cover layouts, contrast, theme access, bounded diagnostics and app-picker state. | Synthetic tests do not certify every monitor/DPI or assistive technology. |
@@ -64,3 +64,20 @@ Tests do not launch real hosts/games or certify capture/hardware. Results come
 from the runner and GitHub Actions. Report Windows/GPU/driver/host/client versions,
 the first failing step and redacted Details. Never attach credential, certificate,
 private-key, host state or browser profile files.
+
+
+## Secure-capture acceptance on 2026-10-18
+
+The temporary host ran in the actual child session on separate test ports with
+DXGI and initialized web credentials. The user paired Moonlight, connected Desktop,
+and confirmed a Steam administrator prompt was visible and usable remotely.
+Its 20-minute deadline then stopped the private host/job, removed both exact
+firewall rules and the protected executable copy, and returned cleanup exit 0.
+The original main/child hosts and existing apps remained running.
+
+The release removes the test deadline, adds persistent protected pairing
+generations, bound plan hashes, a startup/heartbeat watchdog and truthful status.
+Automated tests never approve Windows consent or run real service/host startup.
+No unattended claim establishes Winver, Office, installer, anti-cheat or
+credential-provider visual/input acceptance. Windows UAC capture is not
+application-specific, but those workflows still require real acceptance testing.

@@ -159,7 +159,7 @@ static class RegressionTests
         });
         DesktopSetupTests.Run(Check);
         HostDiscoveryTests.Run(Check);
-        HostProfileTests.Run(Check);
+        HostProfileTests.Run(Check); SecureCaptureTests.Run(Check); SecureCaptureLifecycleTests.Run(Check); SecureCaptureIntegrationTests.Run(Check);
         AgentMessageTests.Run(Check);
         ChildAppTests.Run(Check); InstallationDiscoveryTests.Run(Check); GeneralLauncherTests.Run(Check);
         StreamingHostTests.Run(Check);

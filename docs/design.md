@@ -96,3 +96,15 @@ Keep runtime hosts, credentials, profiles, settings, logs and binaries out of Gi
 scripts/release-files.txt is the explicit source allowlist for optional packaging;
 update it with source/test/doc changes. Routine delivery is the compiled EXE.
 Optional bundles are created only when requested; package tests use temporary fixtures.
+
+
+## Protected capture
+
+See [the capture design](secure-capture-design.md) and
+[implementation plan/evidence](secure-capture-plan.md). SecureCapturePolicy owns
+bounded paths, ACLs, configuration and state generations; SecureCaptureLauncher
+pins plans across elevation and reads trusted status; SecureCaptureRuntime owns
+the demand SCM/job/token lifetime; CaptureApproval owns the temporary normal-user
+parent-session consent relay; SecureCaptureNative contains the Win32 interop.
+HostController checks this evidence before legacy process inspection and refuses
+duplicate starts on Unknown. Normal app launches retain the user helper and UAC.

@@ -25,7 +25,8 @@ This is an experimental same-user Windows session, not a virtual machine.
 - **Keep streaming separate.** Supported child hosts have their own ports,
   pairing state, web credentials, configuration and logs.
 - **Ask before starting a host.** Startup runs inside the attached child session;
-  handle Windows consent through the local ChildStream preview when needed.
+  approve its initial Windows request locally. Initialized Sunshine profiles use
+  protected DXGI capture so clients can show child UAC prompts.
 - **Recover a missing helper.** The launcher attempts a bounded, session-specific
   restart without signing out the child or closing games.
 - **Find and open installed apps.** Search Windows app registrations and Start
@@ -74,10 +75,15 @@ installed separately; they are not bundled in this repository.
 4. **Add streaming when ready.** Install [Sunshine](https://github.com/LizardByte/Sunshine/releases)
    or [Apollo](https://github.com/ClassicOldSong/Apollo/releases), then **Refresh**.
    Use **Browse...** for a portable or nonstandard host location.
-5. **Confirm Start [host].** Handle Windows elevation yourself in the local
-   ChildStream preview. Declining leaves the desktop usable. Select the intended
-   host if several exist.
-6. **Pair the client** using the two distinct addresses below. Keep the viewer
+5. **Confirm Start [host].** For initialized Sunshine profiles, handle the initial
+   Windows approval on the host PC's physical desktop. First-time setup and other
+   hosts may ask in the local child preview. Declining leaves the desktop usable.
+   Select the intended host if several exist.
+6. **Finish first-time Sunshine setup.** Set the child web login. Quit Sunshine
+   from its child-desktop tray icon, then choose **Start Sunshine** again. The
+   initial local setup host uses WGC; subsequent starts use protected DXGI capture.
+   Existing initialized child profiles migrate automatically.
+7. **Pair the client** using the two distinct addresses below. Keep the viewer
    attached while streaming; **Minimize to tray** keeps the connection alive.
 
 With no host installed, **Install a host...** is prominent. With a detected host,
@@ -127,11 +133,14 @@ app renders correctly or avoids its own single-instance and licensing rules.
 
 Select an app and choose **Open in child**. If it needs elevation, explicitly
 choose **Run as administrator**. Check the local ChildStream preview for Windows
-consent. The preview can switch to a blue protected screen while Moonlight keeps
-showing the ordinary child desktop without the prompt. This is a streaming
-capture limitation, not evidence that the app launched in the physical desktop.
-The current child host uses Sunshine's WGC capture mode; remote secure-desktop
-capture/control is unsupported in this setup. A pending prompt does not freeze
+consent. During first-use WGC setup the preview can switch to a blue protected
+screen while Moonlight keeps showing the ordinary desktop. This indicates missing
+protected-desktop capture, rather than an app launching in the physical session.
+Initialized Sunshine profiles now use a child-bound LOCAL_SYSTEM host with DXGI
+capture. The user confirmed both seeing and accepting Steam UAC through Moonlight
+with the temporary implementation. The release preserves that capture path and
+still requires human consent; no UAC policy is disabled. First-time WGC setup and
+Apollo do not have this remote UAC guarantee. A pending prompt does not freeze
 helper status or replay the launch. Canceling consent ends that request.
 
 Child Chrome/Edge use `%LOCALAPPDATA%\ChildStream\Chrome-Child` and `Edge-Child`.
@@ -172,6 +181,27 @@ Preserve these files when updating; they are excluded from Git and source bundle
 | `host-selection.txt`, `child-apps.txt` | Remembered host and app choices. |
 | `launcher.log`, `autostart.log` | Private diagnostics; review/redact before sharing. |
 
+Protected Sunshine capture keeps its authoritative identity under
+`%ProgramFiles%\ChildStream Capture\<profile-id>\saved\<generation>`.
+The profile key includes your Windows user, ChildStream folder and selected host
+path; a host version update keeps that identity. Original child pairing files
+are preserved as migration backups and are not reimported after the protected
+store is initialized. Back up the protected profile as administrator; do not
+publish it. Invalid updates retain the last-good identity and a failed working
+copy for diagnosis. Normal shutdown removes the executable snapshot.
+
+The capture service is demand-only and immediately marked for deletion, with no
+automatic startup. It stops with the exact viewer/helper/setup instance or child
+session. Starting it requires administrator consent from the same Windows account.
+A temporary normal-user task opens that approval on the physical desktop, then
+is deleted after acknowledgment. The elevated supervisor stays in that parent
+session so it can finish saving pairing data after the child signs out. A canceled
+or timed-out request cannot start later. Open apps through the child shell or
+**Open app**: the supported Sunshine entry is
+**Desktop**. Adding Sunshine app/preparation commands in its web UI can target the
+physical console because of upstream SYSTEM launch behavior. Remote UAC streaming
+does not bypass DRM, anti-cheat, application licensing or Windows security prompts.
+
 The installation record and separate browser data live under
 `%LOCALAPPDATA%\ChildStream`. Never publish host identities, keys or credentials.
 
@@ -190,7 +220,9 @@ From the repository root on x64 Windows, in Windows PowerShell 5.1 or PowerShell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\build.ps1
 ```
 
-Output: **ChildStream.exe** in the root. The build uses the installed 64-bit
+Output: **ChildStream.exe** in the root. To build while that EXE is running, create
+a staging directory and pass `-OutputPath <absolute-staged-EXE-path>`. Close the
+viewer and helper before replacing the installed EXE. The build uses the 64-bit
 .NET Framework compiler at
 `%SystemRoot%\Microsoft.NET\Framework64\v4.0.30319\csc.exe` and framework assemblies.
 Sources remain C# 5 compatible. Warnings are errors; a failed compile preserves the

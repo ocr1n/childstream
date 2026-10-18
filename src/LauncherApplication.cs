@@ -200,7 +200,7 @@ sealed class LauncherApplication : IDisposable
         if (string.IsNullOrEmpty(approvedSelection) || promptOpen || inFlight || !approval.CanProceed(child) || !StillConnected(approval.Child) || !LauncherPolicy.CanStartHost(host, true)) return;
         promptOpen = true;
         DialogResult answer;
-        try { answer = MessageBox.Show(window, "Start " + selectedName + " inside the child desktop?\n\nThis uses the child's settings and ports. Windows may ask for administrator approval on the main desktop. Handle its prompt yourself.", "Start " + selectedName + "?", MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2); }
+        try { answer = MessageBox.Show(window, "Start " + selectedName + " inside the child desktop?\n\nThis uses the child's settings and ports. Sunshine uses protected child capture after its web login is initialized. For protected Sunshine capture, approve the initial Windows request on the host PC's physical desktop. First-time setup and other hosts may ask in the local child preview.", "Start " + selectedName + "?", MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2); }
         finally { promptOpen = false; }
         if (answer == DialogResult.Yes) {
             if (approvedSelection == selection && approval.CanProceed(child) && StillConnected(approval.Child)) RequestHost(new AgentRequest { Command = "START_HOST", SelectionId = approvedSelection });

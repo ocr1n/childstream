@@ -54,3 +54,13 @@ src/WindowsInstallPaths.cs
 tests/InstallationDiscoveryTests.cs
 src/NativeAppShortcuts.cs
 tests/GeneralLauncherTests.cs
+docs/secure-capture-design.md
+docs/secure-capture-plan.md
+src/SecureCapturePolicy.cs
+src/SecureCaptureLauncher.cs
+src/SecureCaptureRuntime.cs
+src/SecureCaptureNative.cs
+tests/SecureCaptureTests.cs
+tests/SecureCaptureLifecycleTests.cs
+tests/SecureCaptureIntegrationTests.cs
+src/CaptureApproval.cs

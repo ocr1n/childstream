@@ -133,9 +133,11 @@ static class HostNative
         try { long created, exited, kernel, user; if (!GetProcessTimes(handle, out created, out exited, out kernel, out user)) throw new Win32Exception(Marshal.GetLastWin32Error()); return DateTime.FromFileTimeUtc(created).Ticks; }
         finally { CloseHandle(handle); }
     }
-    public static HostLaunchReceipt StartHost(ChildHostProfile profile) {
+    public static HostLaunchReceipt StartHost(ChildHostProfile profile) {return StartHost(profile,0);}
+    public static HostLaunchReceipt StartHost(ChildHostProfile profile,int viewerPid) {
         if (profile.CurrentIdentity() != profile.Identity) throw new IOException("The child host configuration changed. Refresh and confirm startup again.");
         if (HostPorts.Collides(profile.BasePort, HostPorts.Occupied())) throw new IOException("A child-host TCP or UDP port is already in use. No existing listener was stopped. Close the conflicting app or change the child configuration.");
+        if (SecureCaptureLauncher.Available(profile)) return SecureCaptureLauncher.Start(profile,viewerPid);
         HostLaunchSpec spec = HostProfiles.Adapter(profile.Installation).BuildLaunch(profile);
         var start = new ProcessStartInfo(spec.Executable, NativeArguments.Join(spec.Arguments)) {
             UseShellExecute = true, Verb = "runas", WindowStyle = ProcessWindowStyle.Hidden, WorkingDirectory = spec.WorkingDirectory
@@ -229,7 +231,7 @@ static class SessionAgent
                 // peers verify native path/session identity. A child has no child of
                 // its own: here validate the helper's bound, non-console session.
                 var service = new AgentService(baseDirectory, session, new NativeHostDiscovery(), HostNative.Processes, HostNative.StartHost,
-                    () => PeerIdentity.IsHelperSession(HostNative.CurrentSession(), session, HostNative.WTSGetActiveConsoleSessionId()));
+                    () => PeerIdentity.IsHelperSession(HostNative.CurrentSession(), session, HostNative.WTSGetActiveConsoleSessionId()), null, null, HostNative.StartHost);
                 var security = CreatePipeSecurity(user);
                 for (;;)
                 using (var pipe = new NamedPipeServerStream(name, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous, 4096, 4096, security)) {
@@ -241,7 +243,7 @@ static class SessionAgent
                         if (!PeerIdentity.IsCaller(peer.ExecutablePath, peer.SessionId, System.Windows.Forms.Application.ExecutablePath, session)) throw new UnauthorizedAccessException("Only this install's launcher in a parent session may control its host.");
                         string command = PipeProtocol.ReadText(pipe, 2000);
                         AgentReply reply;
-                        try { reply = service.Handle(AgentCodec.DecodeRequest(command)); }
+                        try { reply = service.Handle(AgentCodec.DecodeRequest(command),checked((int)pid)); }
                         catch (InvalidDataException) { reply = new AgentReply { Status = new HostSnapshot(HostState.Unavailable, "Helper upgrade/repair required. This helper requires protocol version 3.", 0) }; }
                         PipeProtocol.WriteText(pipe, AgentCodec.Encode(reply), 2000);
                     }

@@ -89,15 +89,19 @@ sealed class AgentService
 {
     readonly string root, instance = Guid.NewGuid().ToString("N"); readonly int session;
     readonly Func<AppLaunchSpec, AppLaunchResult> appLaunch; readonly IAppDiscoverySource appSource; readonly IHostDiscoverySource source; readonly Func<string, HostProcess[]> processes; readonly Func<ChildHostProfile, HostLaunchReceipt> launch; readonly Func<bool> isChild;
+    readonly Func<ChildHostProfile,int,HostLaunchReceipt> contextualLaunch;int approvedViewerPid;
     readonly object gate = new object(); string selected; ChildHostProfile profile; HostController controller;
     readonly AppLaunchOperation appOperation = new AppLaunchOperation();
     readonly Dictionary<string, ChildApp> apps = new Dictionary<string, ChildApp>();
-    public AgentService(string root, int session, IHostDiscoverySource source, Func<string, HostProcess[]> processes, Func<ChildHostProfile, HostLaunchReceipt> launch, Func<bool> isChild, IAppDiscoverySource appSource = null, Func<AppLaunchSpec, AppLaunchResult> appLaunch = null) {
-        this.appLaunch = appLaunch ?? ChildAppLauncher.NativeStart; this.appSource = appSource ?? new NativeAppDiscovery(root); this.root = root; this.session = session; this.source = source; this.processes = processes; this.launch = launch; this.isChild = isChild; selected = HostSelectionStore.Load(Path.Combine(root, "host-selection.txt"));
+    public AgentService(string root, int session, IHostDiscoverySource source, Func<string, HostProcess[]> processes, Func<ChildHostProfile, HostLaunchReceipt> launch, Func<bool> isChild, IAppDiscoverySource appSource = null, Func<AppLaunchSpec, AppLaunchResult> appLaunch = null)
+        : this(root, session, source, processes, launch, isChild, appSource, appLaunch, null) { }
+
+    public AgentService(string root, int session, IHostDiscoverySource source, Func<string, HostProcess[]> processes, Func<ChildHostProfile, HostLaunchReceipt> launch, Func<bool> isChild, IAppDiscoverySource appSource, Func<AppLaunchSpec, AppLaunchResult> appLaunch, Func<ChildHostProfile,int,HostLaunchReceipt> contextualLaunch) {
+        this.contextualLaunch = contextualLaunch; this.appLaunch = appLaunch ?? ChildAppLauncher.NativeStart; this.appSource = appSource ?? new NativeAppDiscovery(root); this.root = root; this.session = session; this.source = source; this.processes = processes; this.launch = launch; this.isChild = isChild; selected = HostSelectionStore.Load(Path.Combine(root, "host-selection.txt"));
     }
     string Key(HostInstallation host) { return HostProfiles.Digest(instance + "|" + host.Id + "|" + (profile != null && profile.Installation.Id == host.Id ? profile.Identity : "unprepared")); }
     bool StillSelected(ChildHostProfile prepared) { return isChild() && selected == prepared.Installation.Id && prepared.CurrentIdentity() == prepared.Identity && HostDiscovery.Find(root, source).Installations.Any(h => h.Id == prepared.Installation.Id); }
-    public AgentReply Handle(AgentRequest request) {
+    public AgentReply Handle(AgentRequest request, int callerPid = 0) {
         AgentCodec.Encode(request); // Validate at the service boundary even for an in-process caller.
         lock (gate) {
             if (request.Command == "LIST_APPS" || request.Command == "REGISTER_APP" || (request.Command == "LAUNCH_APP" || request.Command == "LAUNCH_APP_ADMIN")) return HandleApps(request);
@@ -127,7 +131,7 @@ sealed class AgentService
                     profile = HostProfiles.Prepare(root, current, HostPorts.Occupied()); var prepared = profile;
                     controller = new HostController(prepared, session, () => processes(prepared.Installation.ExecutablePath), () => {
                         lock (gate) { if (!StillSelected(prepared)) throw new IOException("The child session, selected host or its configuration changed. Refresh and confirm startup again."); }
-                        return launch(prepared);
+                        return contextualLaunch == null ? launch(prepared) : contextualLaunch(prepared, approvedViewerPid);
                     });
                 }
                 reply.SelectionId = Key(current); reply.Hosts = Describe(found.Installations);
@@ -135,7 +139,7 @@ sealed class AgentService
                 if (request.Command == "START_HOST") {
                     if (!isChild()) reply.Status = new HostSnapshot(HostState.Unavailable, "This helper is not in the actual child desktop. Reconnect or repair the helper.", 0);
                     else if (request.SelectionId != reply.SelectionId) reply.Diagnostic = "The host selection changed. Review the current host and confirm again.";
-                    else reply.Status = controller.RequestStart();
+                    else { approvedViewerPid = callerPid; reply.Status = controller.RequestStart(); }
                 }
                 if (request.Command == "SELECT_HOST") HostSelectionStore.Save(Path.Combine(root, "host-selection.txt"), current.Id);
             } catch (Exception ex) { reply.Status = new HostSnapshot(HostState.Error, ex.Message, 0); }

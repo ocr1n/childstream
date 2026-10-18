@@ -70,6 +70,7 @@ static class HostDiscovery
 {
     public static HostInstallation FromExecutable(string path, IHostDiscoverySource source) {
         if (!Path.IsPathRooted(path) || !string.Equals(Path.GetExtension(path), ".exe", StringComparison.OrdinalIgnoreCase) || !source.Exists(path)) throw new InvalidDataException("Choose an installed streaming host EXE.");
+        if (SecureCapturePolicy.IsInternalSnapshot(path)) throw new InvalidDataException("Choose the original installed host, not an internal ChildStream capture copy.");
         var candidate = new HostCandidate(path, null, "browse"); var metadata = source.Inspect(path); HostKind? kind = Identify(candidate, metadata);
         if (!kind.HasValue) throw new InvalidDataException("Could not identify Sunshine, Apollo or VibePollo in this executable's metadata.");
         return new HostInstallation(path, kind.Value, metadata, "browse");
@@ -94,7 +95,7 @@ static class HostDiscovery
                     string path = candidate.ExecutablePath;
                     if (string.IsNullOrWhiteSpace(path) || !Path.IsPathRooted(path) || !string.Equals(Path.GetExtension(path), ".exe", StringComparison.OrdinalIgnoreCase)) { diagnose("A host candidate has an invalid executable path."); continue; }
                     path = Path.GetFullPath(path);
-                    if (!source.Exists(path)) continue;
+                    if (SecureCapturePolicy.IsInternalSnapshot(path) || !source.Exists(path)) continue;
                     HostFileMetadata metadata = source.Inspect(path); HostKind? kind = Identify(candidate, metadata);
                     if (!kind.HasValue) { diagnose("Could not verify the streaming-host identity at " + path + ". Choose a supported host executable."); continue; }
                     var installation = new HostInstallation(path, kind.Value, metadata, candidate.Source);

@@ -99,31 +99,58 @@ An app can hand off to its existing same-user instance. In particular, exit main
 Steam yourself before opening child Steam and launching a game there. Running an
 EXE as administrator does not transfer an existing main-desktop window.
 
-Choose **Run as administrator** explicitly when needed. Check the local
-ChildStream preview on the host PC for Windows consent. The preview may turn
-blue and show the child's protected prompt while Moonlight keeps showing the
-ordinary desktop without it. This was the user's clarified observation in the
-Winver tests; the prompt was not taking over the physical desktop.
+Choose **Run as administrator** explicitly when needed. An initialized Sunshine
+profile started through the updated ChildStream uses child-bound SYSTEM/DXGI
+capture, which can show the child's Windows consent screen through Moonlight.
+The user confirmed Steam consent with the temporary feasibility implementation;
+other app and security-product workflows still need live acceptance.
 
-The current child host uses WGC. Sunshine's maintainer describes UAC visibility
-with its service and DXGI capture, rather than the direct administrator/WGC
-startup used here. The stock service targets the console session, so installing
-or restarting it does not automatically solve child-session capture.
+If Moonlight keeps showing the ordinary desktop while the local preview turns
+blue, check whether this is first-use WGC setup or an unsupported host. Set the
+Sunshine child web login, quit its child tray host, and start Sunshine again
+through ChildStream. The protected host's initial Windows approval appears on
+the host PC's physical desktop, before streaming starts. No approval is automated
+and UAC stays enabled.
 [Upstream UAC discussion](https://github.com/LizardByte/Sunshine/issues/3487).
 
-Respond to Windows yourself through the local preview. The app picker reports
-pending startup and disables repeat launches until it settles. Canceling consent
-ends that request. ChildStream keeps UAC enabled. Remote secure-desktop capture
-and input need a separately validated child-aware implementation.
-
-A possible Steam workaround is to exit Steam yourself, open child Steam through
-**Run as administrator**, approve the initial prompt through the local
-ChildStream preview, then test the game. This gives Steam and games it directly launches administrator privileges.
-It may reduce later prompts through
-[Windows token inheritance](https://learn.microsoft.com/en-us/windows/security/application-security/application-control/user-account-control/how-it-works),
-but separate launchers, prerequisites and anti-cheat can behave differently.
-This is unverified for individual games and does not add secure-desktop capture.
+A pending app launch disables repeats while status checks remain responsive.
+Canceling consent ends that request. Apps with existing same-user instances,
+separate prerequisite installers and anti-cheat may still behave differently.
+Start games through Steam running in the child, using Moonlight's Desktop entry.
 
 After upgrading, the viewer and helper must both load the new EXE. A version-3
 helper cannot exchange app messages with an old viewer. Save child work and end
 that session normally before replacing the EXE; restart ChildStream afterward.
+
+
+## UAC appears in the local preview but not Moonlight
+
+For Sunshine, complete its child web-login setup, quit that child host, then start
+it through the updated ChildStream. Initialized profiles use a child-bound SYSTEM
+host with DXGI. Approve its initial Windows request on the host PC's physical
+desktop yourself. Once streaming starts, subsequent child UAC prompts can be
+shown to the client. This
+was confirmed for Steam using the temporary feasibility host. WGC setup mode,
+Apollo/VibePollo, other security desktops and all applications are not certified.
+
+Protected profile location: `%ProgramFiles%\ChildStream Capture\<profile-id>`.
+Read `last-run.log` for redacted lifecycle diagnostics; inspect the active run's
+`data\sunshine.log` as administrator if initialization fails. Never publish
+this profile, pairing state, credentials, certificates or keys. A failed state
+commit keeps the last-good saved generation and retains the working run for
+recovery. Do not delete the saved-generation pointer or copy stale original
+identity files over an initialized protected profile.
+
+If Windows approval is canceled or startup times out, that request is invalidated
+before any later host start. A missing Task Scheduler acknowledgment indicates
+that the normal-user approval relay could not start on the physical desktop.
+Check local Task Scheduler restrictions; do not enable automatic elevation.
+
+An expired or inconsistent protected-host heartbeat deliberately shows Unknown
+and blocks another host. Save work, end the child and close the viewer; the
+demand worker should stop. If its teardown cannot be confirmed, preserve its
+files and inspect diagnostics instead of starting duplicate service instances.
+
+Keep the same portable folder when updating. A staged EXE must replace
+`ChildStream.exe` only after the viewer and its idle helper are closed. Opening a
+staged build from another folder creates a different installation identity.

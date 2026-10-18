@@ -37,20 +37,32 @@ folder would reintroduce process/data conflicts.
 ## Elevation
 
 **Open app / Run as administrator** requests Windows `runas` from the actual
-child helper. This does not guarantee where Windows displays consent. Live
-Winver tests on Windows 11 build 26300 displayed consent on the main desktop,
-even though the helper's normal and linked tokens, and the consent process,
-belonged to the child session. An initial parent-window test was inconclusive:
-.NET Framework ignores ErrorDialogParentHandle unless ErrorDialog is also true.
-Consent placement is unresolved on this PC; these tests do not establish a
-universal limitation across Windows builds.
+child helper. The user clarified that Windows consent appears inside the local
+ChildStream RDP viewer, whose preview turns blue, while Moonlight keeps showing
+the normal child desktop without that prompt. The earlier description of a
+physical-main-desktop prompt was a misinterpretation. Helper and consent process
+session checks are consistent with the clarified observation.
 
-UAC normally switches to a protected Winlogon desktop. Keep the main desktop
-accessible to respond to Windows yourself. Only one app launch can remain pending
-at a time; status checks remain responsive and cancellation does not retry.
-No automatic consent, global UAC policy change or blanket elevation is used.
-Capturing and controlling secure prompts over Moonlight is separately unverified.
-[Microsoft UAC behavior](https://learn.microsoft.com/en-us/windows/security/application-security/application-control/user-account-control/how-it-works).
+The current child host runs directly as administrator with `capture = wgc`.
+Sunshine's maintainer identifies service-based DXGI capture as its UAC-capable
+path. WGC and that service path are distinct; another parent-window handle or
+administrator launch alone does not add protected-screen streaming.
+[Sunshine's UAC discussion](https://github.com/LizardByte/Sunshine/issues/3487).
+
+A normal-user diagnostic successfully created a DXGI duplication interface for
+the child's attached display. It never acquired screen frames. This establishes
+ordinary-desktop API availability, not secure-desktop streaming or remote input.
+Microsoft restricts secure-desktop duplication to LOCAL_SYSTEM. Sunshine's stock
+service selects the active console session, so it cannot simply replace the
+current independent child host. A child-aware privileged capture/input design
+requires separate implementation and acceptance.
+[DXGI access requirements](https://learn.microsoft.com/en-us/windows/win32/api/dxgi1_2/nf-dxgi1_2-idxgioutput1-duplicateoutput),
+[Sunshine service targeting](https://github.com/LizardByte/Sunshine/blob/master/tools/sunshinesvc.cpp).
+
+For now, respond to Windows yourself through the local ChildStream preview.
+Only one app launch can remain pending; status checks remain responsive and
+cancellation does not retry. No automatic consent, global UAC policy change or
+blanket elevation is used.
 
 Installing a driver or changing a Windows service from the child still changes
 the shared computer. More permission does not turn the child into an isolated OS.

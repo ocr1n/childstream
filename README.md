@@ -25,7 +25,7 @@ This is an experimental same-user Windows session, not a virtual machine.
 - **Keep streaming separate.** Supported child hosts have their own ports,
   pairing state, web credentials, configuration and logs.
 - **Ask before starting a host.** Startup runs inside the attached child session;
-  Windows consent may appear on the main desktop.
+  handle Windows consent through the local ChildStream preview when needed.
 - **Recover a missing helper.** The launcher attempts a bounded, session-specific
   restart without signing out the child or closing games.
 - **Find and open installed apps.** Search Windows app registrations and Start
@@ -74,8 +74,8 @@ installed separately; they are not bundled in this repository.
 4. **Add streaming when ready.** Install [Sunshine](https://github.com/LizardByte/Sunshine/releases)
    or [Apollo](https://github.com/ClassicOldSong/Apollo/releases), then **Refresh**.
    Use **Browse...** for a portable or nonstandard host location.
-5. **Confirm Start [host].** Handle Windows elevation yourself; consent may appear
-   on the main desktop. Declining leaves the desktop usable. Select the intended
+5. **Confirm Start [host].** Handle Windows elevation yourself in the local
+   ChildStream preview. Declining leaves the desktop usable. Select the intended
    host if several exist.
 6. **Pair the client** using the two distinct addresses below. Keep the viewer
    attached while streaming; **Minimize to tray** keeps the connection alive.
@@ -126,11 +126,13 @@ text, scripts or arbitrary flags. Discovery and dispatch cannot guarantee that a
 app renders correctly or avoids its own single-instance and licensing rules.
 
 Select an app and choose **Open in child**. If it needs elevation, explicitly
-choose **Run as administrator**. Windows consent may appear on the main desktop,
-even when the request originates in the child. A pending prompt is reported
-without freezing helper status or replaying the launch. Canceling consent does
-not attempt another launch. Containing administrator prompts in the child preview
-is currently unresolved; Moonlight secure-desktop control is also unverified.
+choose **Run as administrator**. Check the local ChildStream preview for Windows
+consent. The preview can switch to a blue protected screen while Moonlight keeps
+showing the ordinary child desktop without the prompt. This is a streaming
+capture limitation, not evidence that the app launched in the physical desktop.
+The current child host uses Sunshine's WGC capture mode; remote secure-desktop
+capture/control is unsupported in this setup. A pending prompt does not freeze
+helper status or replay the launch. Canceling consent ends that request.
 
 Child Chrome/Edge use `%LOCALAPPDATA%\ChildStream\Chrome-Child` and `Edge-Child`.
 Main Chrome can stay open. Ordinary Chrome icons and URL handlers still use its

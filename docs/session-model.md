@@ -36,17 +36,20 @@ folder would reintroduce process/data conflicts.
 
 ## Elevation
 
-An app started in the child can request a normal Windows administrator consent
-prompt there; a Sunshine elevation prompt was previously accepted through the
-local child preview. That does not establish that every secure prompt can be
-captured and controlled over Moonlight. UAC normally switches to a protected
-Winlogon desktop, with restricted access. General secure-desktop capture/input
-requires separate host-specific testing. No automatic consent, global UAC change
-or blanket elevation is used. **Open app / Run as administrator** explicitly
-requests Windows `runas` from the child helper. Only one app launch can remain
-pending at a time. Status checks remain responsive while consent waits, and
-canceling it does not retry.
-[Microsoft desktop and UAC behavior](https://learn.microsoft.com/en-us/windows/win32/winstation/desktops).
+**Open app / Run as administrator** requests Windows `runas` from the actual
+child helper. This does not guarantee where Windows displays consent. Live
+Winver tests on Windows 11 build 26300 displayed consent on the main desktop,
+even though the helper's normal and linked tokens, and the consent process,
+belonged to the child session. Supplying an explicit child-owned parent window
+did not change that result. Consent placement is unresolved on this PC; these
+tests do not establish a universal limitation across Windows builds.
+
+UAC normally switches to a protected Winlogon desktop. Keep the main desktop
+accessible to respond to Windows yourself. Only one app launch can remain pending
+at a time; status checks remain responsive and cancellation does not retry.
+No automatic consent, global UAC policy change or blanket elevation is used.
+Capturing and controlling secure prompts over Moonlight is separately unverified.
+[Microsoft UAC behavior](https://learn.microsoft.com/en-us/windows/security/application-security/application-control/user-account-control/how-it-works).
 
 Installing a driver or changing a Windows service from the child still changes
 the shared computer. More permission does not turn the child into an isolated OS.
@@ -75,10 +78,10 @@ build; it needs its own adapter/integration work before independent child startu
 can be claimed.
 ## Viewer sizing
 
-Resizing/maximizing ChildStream requests a child resolution matching the desktop
-preview area after a short debounce. The initial resolution in `display.cfg`
-is used for connection startup; its scale remains in effect afterward. The viewer
-has no extra internal padding. If Windows rejects dynamic display updates, the
-current resolution stays connected and is scaled proportionally, with a notice.
-A streaming host may need its own display/capture refresh after a resolution
-change; remote video acceptance must be tested on the chosen host/client.
+The viewer uses proportional smart sizing. Resizing/maximizing its window does
+not change the child desktop resolution. The connection starts with the existing
+`display.cfg` values, or the default 1920x1080; subsequent display changes remain
+under Windows and the streaming host/client's control. Automatic matching to the
+host PC's preview size was reverted because it interfered with client resolution
+selection. Different aspect ratios can leave letterboxing rather than stretching
+or cropping the image. No host display configuration is changed by this rollback.

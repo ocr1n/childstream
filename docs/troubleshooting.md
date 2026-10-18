@@ -16,6 +16,8 @@ from a missing streaming host.
 | Chrome icon opens main Chrome | Use Open app or Chrome (child desktop). Normal icons use the normal profile. |
 | Steam already running elsewhere | Exit main-desktop Steam yourself, then open it through ChildStream. |
 | Process starts without usable UI | Check the child taskbar and normal app launcher. Dispatch does not verify rendering, sign-in, anti-cheat or RDP support. |
+| Administrator prompt missing from child | Check the main desktop. This was reproduced even for Winver launched from the child; consent placement is unresolved. |
+| Client resolution changes when maximizing | Update to the build with viewport-driven resolution changes reverted. Reconnect after updating; choose resolution through your streaming host/client as before. |
 | Stream stops when viewer closes | Keep the viewer attached; use Minimize to tray instead of Exit viewer. |
 
 ## Helper recovery
@@ -97,10 +99,22 @@ An app can hand off to its existing same-user instance. In particular, exit main
 Steam yourself before opening child Steam and launching a game there. Running an
 EXE as administrator does not transfer an existing main-desktop window.
 
-Choose **Run as administrator** explicitly when needed. Check the local child
-preview for Windows consent. The app picker reports pending startup and disables
-repeat launches until it settles. ChildStream does not accept consent for you,
-disable UAC or guarantee that Moonlight can capture the protected desktop.
+Choose **Run as administrator** explicitly when needed. Check the main desktop
+as well as the child preview for Windows consent. On the tested Windows build,
+Winver requested from the child still displayed its prompt on the main desktop;
+this also happened with an explicit child-owned parent window. Child preview
+consent placement is unresolved. The app picker reports pending startup and
+disables repeat launches until it settles. Respond to Windows yourself. Canceling
+consent ends that request. ChildStream does not disable UAC or guarantee that
+Moonlight can capture the protected desktop.
+
+A possible Steam workaround is to exit Steam yourself, open child Steam through
+**Run as administrator**, approve the initial main-desktop prompt, then test the
+game. This gives Steam and games it directly launches administrator privileges.
+It may reduce later prompts through
+[Windows token inheritance](https://learn.microsoft.com/en-us/windows/security/application-security/application-control/user-account-control/how-it-works),
+but separate launchers, prerequisites and anti-cheat can behave differently.
+This is unverified for individual games and does not fix consent placement.
 
 After upgrading, the viewer and helper must both load the new EXE. A version-3
 helper cannot exchange app messages with an old viewer. Save child work and end

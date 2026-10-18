@@ -25,14 +25,14 @@ This is an experimental same-user Windows session, not a virtual machine.
 - **Keep streaming separate.** Supported child hosts have their own ports,
   pairing state, web credentials, configuration and logs.
 - **Ask before starting a host.** Startup runs inside the attached child session;
-  you handle Windows elevation there.
+  Windows consent may appear on the main desktop.
 - **Recover a missing helper.** The launcher attempts a bounded, session-specific
   restart without signing out the child or closing games.
 - **Find and open installed apps.** Search Windows app registrations and Start
   menu shortcuts, or Browse to a portable app. Choose normal or administrator
   startup inside the child; Steam reports main-session conflicts.
-- **Fit your workspace.** Maximizing or resizing requests a matching child display
-  resolution, with proportional scaling if Windows cannot apply it.
+- **Keep display choices in control.** The viewer scales the desktop proportionally
+  without replacing the resolution selected in the child or by the streaming host.
 - **Keep controls clear.** Visible hover/pressed/focus states, pairing addresses,
   reconnect, tray controls and six themes with miniature window previews.
 
@@ -74,8 +74,9 @@ installed separately; they are not bundled in this repository.
 4. **Add streaming when ready.** Install [Sunshine](https://github.com/LizardByte/Sunshine/releases)
    or [Apollo](https://github.com/ClassicOldSong/Apollo/releases), then **Refresh**.
    Use **Browse...** for a portable or nonstandard host location.
-5. **Confirm Start [host].** Approve any elevation prompt inside the child preview.
-   Declining leaves the desktop usable. Select the intended host if several exist.
+5. **Confirm Start [host].** Handle Windows elevation yourself; consent may appear
+   on the main desktop. Declining leaves the desktop usable. Select the intended
+   host if several exist.
 6. **Pair the client** using the two distinct addresses below. Keep the viewer
    attached while streaming; **Minimize to tray** keeps the connection alive.
 
@@ -125,10 +126,11 @@ text, scripts or arbitrary flags. Discovery and dispatch cannot guarantee that a
 app renders correctly or avoids its own single-instance and licensing rules.
 
 Select an app and choose **Open in child**. If it needs elevation, explicitly
-choose **Run as administrator**, then approve Windows consent in the child
-preview. A pending prompt is reported without freezing helper status or replaying
-the launch. Canceling consent does not attempt another launch. Secure-desktop
-control from Moonlight still depends on the host; use the local preview if needed.
+choose **Run as administrator**. Windows consent may appear on the main desktop,
+even when the request originates in the child. A pending prompt is reported
+without freezing helper status or replaying the launch. Canceling consent does
+not attempt another launch. Containing administrator prompts in the child preview
+is currently unresolved; Moonlight secure-desktop control is also unverified.
 
 Child Chrome/Edge use `%LOCALAPPDATA%\ChildStream\Chrome-Child` and `Edge-Child`.
 Main Chrome can stay open. Ordinary Chrome icons and URL handlers still use its
@@ -143,7 +145,7 @@ Wallpaper Engine can share settings; check the child's display mapping first.
 
 | Control | Behavior |
 | --- | --- |
-| **Resize / maximize** | Updates the child resolution to the preview area while retaining the configured display scale; no forced reconnect. |
+| **Resize / maximize** | Scales the preview proportionally without changing the child or streaming client resolution. |
 | **Themes** | Light, Dark, Ocean, Sunset, Forest or Rose, with a saved preference. Windows high contrast takes precedence. |
 | **Details** | Wrapped, scrollable diagnostics without long native hover strips. |
 | **Reconnect** | Reattaches without signing out the child. |
@@ -173,10 +175,10 @@ The installation record and separate browser data live under
 
 Optional `display.cfg` accepts `widthxheight` or `widthxheightxscale`, for example
 `2800x1272x225`. Dimensions: 200–8192; scale: 100–500 percent, or 0 for no override.
-Invalid input falls back to 1920×1080 without a scale override. After connecting,
-resolution follows the preview area; the scale preference stays in effect. RDP
-requires an even display width, so an odd viewport is rounded down by one pixel.
-Hardware limits may be stricter.
+Invalid input falls back to 1920×1080 without a scale override. This is the initial
+connection resolution. Changing or maximizing the viewer does not replace later
+resolution choices made in the child desktop or by the host/client. Hardware
+limits may be stricter.
 
 ## Build from source
 

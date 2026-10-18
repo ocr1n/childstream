@@ -200,18 +200,7 @@ static class GeneralLauncherTests
             connection = (int)gate.GetType().GetProperty("ConnectionGeneration").GetValue(gate, null); gate.Close();
             Assert(!(bool)accepts.Invoke(gate, new object[] { connection, (uint)7 }), "closed viewer accepted app results");
         });
-        check("odd viewport widths are rounded to an even RDP monitor width", delegate {
-            int width = 0, height = 0;
-            var sizing = new RdpViewport((w, h) => { width = w; height = h; }, text => { throw new Exception(text); }, () => 0);
-            sizing.Fit(7, true, 2237, 1163);
-            Assert(width == 2236 && height == 1163, "an odd monitor width was sent to Windows");
-        });
-        check("oversized viewports retain aspect ratio within Windows display bounds", delegate {
-            int width = 0, height = 0;
-            var sizing = new RdpViewport((w, h) => { width = w; height = h; }, text => { throw new Exception(text); }, () => 0);
-            sizing.Fit(7, true, 16384, 9216);
-            Assert(width == 8192 && height == 4608, "large viewport was stretched or exceeded maximum display dimensions");
-        });
+
         check("old helpers and malformed app paging metadata are rejected explicitly", delegate {
             foreach (string json in new[] {
                 "{\"Version\":2,\"Command\":\"LIST_APPS\"}",
@@ -225,24 +214,7 @@ static class GeneralLauncherTests
                 Assert(rejected, "malformed app reply was accepted");
             }
         });
-        check("viewport sizing follows maximize reconnect and child changes without resize loops", delegate {
-            int width = 0, height = 0, updates = 0;
-            object controller = Activator.CreateInstance(Required("RdpViewport"), new object[] { new Action<int, int>((w, h) => { width = w; height = h; updates++; }), new Action<string>(text => { throw new Exception(text); }), new Func<long>(() => 0) });
-            var fit = controller.GetType().GetMethod("Fit"); Assert(fit != null, "viewport fitting is missing");
-            Action<uint, bool, int, int> size = (session, connected, w, h) => fit.Invoke(controller, new object[] { session, connected, w, h });
-            size(7, true, 1024, 600); size(7, true, 1024, 600); Assert(updates == 1, "unchanged viewport was sent repeatedly");
-            size(7, true, 2236, 1163); Assert(width == 2236 && height == 1163 && updates == 2, "maximize retained the old desktop dimensions");
-            size(7, false, 2236, 1163); size(7, true, 2236, 1163); Assert(updates == 3, "reconnected desktop inherited the old resize state");
-            size(8, true, 2236, 1163); Assert(updates == 4, "new child inherited another desktop's size state");
-            size(0, true, 1600, 900); size(8, true, 0, 0); Assert(updates == 4, "missing or minimized desktop was resized");
-        });
-        check("unsupported viewport updates back off and report failure without disconnecting", delegate {
-            int updates = 0, notices = 0; long time = 0;
-            object controller = Activator.CreateInstance(Required("RdpViewport"), new object[] { new Action<int, int>((w, h) => { updates++; throw new IOException("unsupported"); }), new Action<string>(text => notices++), new Func<long>(() => time) });
-            var fit = controller.GetType().GetMethod("Fit");
-            for (int i = 0; i < 12; i++) { fit.Invoke(controller, new object[] { (uint)7, true, 1920, 1080 }); time += 1000; }
-            Assert(updates <= 3 && notices == 1, "unsupported control was hammered or failure was silent");
-        });
+
         check("enabled primary controls expose visible hover and press feedback in every theme", delegate {
             foreach (var theme in AppThemes.All) using (var button = new ThemedButton { Text = "Start desktop", Tag = true, Size = new Size(180, 42) }) {
                 ThemeStyle.Button(button, theme); button.CreateControl();

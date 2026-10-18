@@ -105,7 +105,7 @@ sealed class ChildAppWindow : Form
         string selected = list.SelectedItems.Count == 1 ? (string)list.SelectedItems[0].Tag : null; list.BeginUpdate(); list.Items.Clear();
         foreach (AgentApp app in apps) { var item = new ListViewItem(app.Name) { Tag = app.Id }; item.SubItems.Add(app.Path); list.Items.Add(item); if (app.Id == selected) item.Selected = true; }
         list.EndUpdate();
-        detail.Text = !string.IsNullOrEmpty(message) ? message : apps.Length == 0 ? "No matching apps. Clear Search, Refresh, or Browse to the app's installed EXE." : "Open normally, or choose Run as administrator and approve Windows consent in the child. App-specific single-instance and game restrictions still apply.";
+        detail.Text = !string.IsNullOrEmpty(message) ? message : apps.Length == 0 ? "No matching apps. Clear Search, Refresh, or Browse to the app's installed EXE." : "Open normally, or choose Run as administrator. Windows consent may appear on the main desktop. Existing app instances and game restrictions still apply.";
         UpdateActions();
     }
     protected override void Dispose(bool disposing) { if (disposing) { searchTimer.Dispose(); launchTimer.Dispose(); } base.Dispose(disposing); }

@@ -7,7 +7,7 @@ control. No external managed packages, embedded browser or separate helper binar
 
 | Source | Responsibility |
 | --- | --- |
-| ChildStream.cs / ChildStream.Core.cs / RdpViewport.cs | Entry point, RDP interop, credentials, display/session policy. |
+| ChildStream.cs / ChildStream.Core.cs | Entry point, RDP interop, credentials, display/session policy. |
 | DesktopSetup.cs | Explicit setup, Startup registration and installation identity. |
 | LauncherApplication.cs / LauncherPolicy.cs | Async orchestration, session generations and confirmations. |
 | LauncherWindow.cs / ChildAppWindow.cs / ThemePickerWindow.cs / AppThemes.cs | Native forms, semantic theme tokens, previews and diagnostics. |
@@ -76,12 +76,11 @@ hover and pressed fills, readable action text and visible keyboard focus. Rounde
 native buttons retain their keyboard/accessibility behavior. Layout does not
 bounce or animate on hover; high contrast uses native system rendering.
 
-A debounced viewport update uses IMsRdpClient9.UpdateSessionDisplaySettings after
-the child is connected. Width/height follow the actual AxHost client area, with
-even-width normalization and proportional clamping at 8,192 pixels and the existing display-scale settings.
-Disconnect/session changes reset geometry; unsupported updates retry at most
-three times with backoff and report a fallback. Smart sizing remains proportional;
-no reconnect, crop or stretch is used to hide a failed display update.
+Display setup retains the original pre-connect resolution/scale configuration.
+There is no resize timer or UpdateSessionDisplaySettings call: maximizing the
+viewer must not overwrite a client-selected resolution. Smart sizing scales the
+preview proportionally and AxHost fills its zero-padding workspace. Differing
+screen aspect ratios can leave letterboxing; do not crop/stretch to conceal it.
 
 Preserve accessible names, native keyboard navigation, visible focus, readable
 disabled controls, gentle dark palettes and minimum-size scrolling. Form tests

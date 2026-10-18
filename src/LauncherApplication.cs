@@ -15,8 +15,6 @@ sealed class LauncherApplication : IDisposable
     readonly HostPromptPolicy prompts = new HostPromptPolicy();
     readonly Stopwatch clock = Stopwatch.StartNew();
     readonly Timer timer = new Timer { Interval = 2000 };
-    readonly Timer displayTimer = new Timer { Interval = 250 };
-    RdpViewport viewport; long resizeAfter;
     AgentRequest pendingApps; ChildAppWindow pendingPicker; uint pendingAppsChild; int pendingAppsToken;
     readonly NotifyIcon tray;
     readonly ContextMenuStrip menu = new ContextMenuStrip();
@@ -79,17 +77,9 @@ sealed class LauncherApplication : IDisposable
             if (window.WindowState != FormWindowState.Minimized) return;
             window.Hide(); tray.ShowBalloonTip(1500, "ChildStream", "Still attached. Double-click the tray icon to restore the viewer.", ToolTipIcon.Info);
         };
-        window.FormClosing += delegate { displayTimer.Stop(); ending = true; wantReconnect = false; requests.Close(); timer.Stop(); tray.Visible = false; };
+        window.FormClosing += delegate { ending = true; wantReconnect = false; requests.Close(); timer.Stop(); tray.Visible = false; };
         window.Shown += delegate { DiscoverBeforeConnect(); };
         timer.Tick += delegate { Poll(); };
-        viewport = new RdpViewport((width, height) => {
-            if (!StillConnected(child)) throw new IOException("The attached child desktop changed.");
-            ocx.UpdateSessionDisplaySettings((uint)width, (uint)height, 0u, 0u, 0u, scale.DesktopScale, scale.DeviceScale);
-        }, message => { Program.Log(message); window.SetNotice(message); }, () => clock.ElapsedMilliseconds);
-        displayTimer.Tick += delegate {
-            if (ending || rdp == null || clock.ElapsedMilliseconds < resizeAfter || window.WindowState == FormWindowState.Minimized) return;
-            viewport.Fit(child, StillConnected(child), rdp.ClientSize.Width, rdp.ClientSize.Height);
-        };
         bool enabled;
         bool known = Program.ChildSessionsEnabled(out enabled);
         setupReady = known && enabled;
@@ -100,7 +90,7 @@ sealed class LauncherApplication : IDisposable
         }
     }
 
-    public int Run() { timer.Start(); displayTimer.Start(); Application.Run(window); return 0; }
+    public int Run() { timer.Start(); Application.Run(window); return 0; }
     void Show() { window.Show(); window.WindowState = FormWindowState.Normal; window.Activate(); }
     bool TryOpen(string target)
     {
@@ -132,7 +122,7 @@ sealed class LauncherApplication : IDisposable
         }
         try {
             if (rdp == null) {
-                rdp = new RdpBox(); rdp.ClientSizeChanged += delegate { resizeAfter = clock.ElapsedMilliseconds + 250; }; window.AttachViewer(rdp); rdp.CreateControl(); ocx = rdp.Ocx;
+                rdp = new RdpBox(); window.AttachViewer(rdp); rdp.CreateControl(); ocx = rdp.Ocx;
                 scale = new RdpScaleSettings(name => { object value; ((IMsRdpExtendedSettings)rdp.Ocx).get_Property(name, out value); return value; }, (name, value) => { ((IMsRdpExtendedSettings)rdp.Ocx).put_Property(name, ref value); });
             }
             ocx.Server = "localhost"; ocx.UserName = account; ocx.AdvancedSettings2.ClearTextPassword = password;
@@ -159,7 +149,7 @@ sealed class LauncherApplication : IDisposable
     void Reconnect()
     {
         if (ending || !setupReady) return;
-        requests.Update(0, false); child = 0; viewport.Fit(0, false, 0, 0);
+        requests.Update(0, false); child = 0;
         try { if (State() != 0) { wantReconnect = true; ocx.Disconnect(); lastAttempt = clock.ElapsedMilliseconds - 6001; } else Connect(); }
         catch (Exception ex) { window.SetNotice("Reconnect failed: " + ex.Message); }
     }
@@ -174,7 +164,6 @@ sealed class LauncherApplication : IDisposable
         HostSnapshot pending = LauncherPolicy.ForSession(host, child, actual);
         if (!Object.ReferenceEquals(host, pending)) { host = pending; window.SetHost(host); }
         requests.Update(actual, state == 1 && actual != 0); child = actual;
-        if (state != 1 || child == 0) viewport.Fit(0, false, 0, 0);
         if (appWindow != null && !appWindow.IsDisposed) appWindow.SetAvailable(actual != 0 && state == 1);
         if (state == 1) window.SetSession("Connected", "The child desktop is attached. You can keep using your physical desktop.", true, true);
         else if (state != 0) window.SetSession("Connecting...", "Windows is opening the second desktop.", false, true);
@@ -211,7 +200,7 @@ sealed class LauncherApplication : IDisposable
         if (string.IsNullOrEmpty(approvedSelection) || promptOpen || inFlight || !approval.CanProceed(child) || !StillConnected(approval.Child) || !LauncherPolicy.CanStartHost(host, true)) return;
         promptOpen = true;
         DialogResult answer;
-        try { answer = MessageBox.Show(window, "Start " + selectedName + " inside the child desktop?\n\nThis uses the child's settings and ports. Windows may ask you to approve elevation inside that desktop.", "Start " + selectedName + "?", MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2); }
+        try { answer = MessageBox.Show(window, "Start " + selectedName + " inside the child desktop?\n\nThis uses the child's settings and ports. Windows may ask for administrator approval on the main desktop. Handle its prompt yourself.", "Start " + selectedName + "?", MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2); }
         finally { promptOpen = false; }
         if (answer == DialogResult.Yes) {
             if (approvedSelection == selection && approval.CanProceed(child) && StillConnected(approval.Child)) RequestHost(new AgentRequest { Command = "START_HOST", SelectionId = approvedSelection });
@@ -311,5 +300,5 @@ sealed class LauncherApplication : IDisposable
             MessageBox.Show(window, "Could not sign out the child desktop.\n" + ex.Message, "ChildStream", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
-    public void Dispose() { requests.Close(); timer.Dispose(); displayTimer.Dispose(); tray.Dispose(); menu.Dispose(); window.Dispose(); }
+    public void Dispose() { requests.Close(); timer.Dispose(); tray.Dispose(); menu.Dispose(); window.Dispose(); }
 }

@@ -171,7 +171,7 @@ sealed class AgentService
             }
         } catch (Exception ex) { reply.Diagnostic = HostInstallation.Limit(ex.Message, 512); }
         var progress = appOperation.Snapshot; reply.AppLaunchPending = progress.Pending;
-        if (reply.Diagnostic.Length == 0) reply.Diagnostic = progress.Pending ? "An app launch is pending. Check the child preview for Windows consent. Wait for it to finish before starting another app." : progress.Result == null ? "" : progress.Result.Message;
+        if (reply.Diagnostic.Length == 0) reply.Diagnostic = progress.Pending ? "An app launch is pending. If Windows asks for administrator approval, check the main desktop as well as the child preview. Respond to Windows yourself; wait before starting another app." : progress.Result == null ? "" : progress.Result.Message;
         reply.AppTotal = matches.Length; reply.AppOffset = request.Offset < matches.Length ? request.Offset : 0;
         reply.Apps = matches.Skip(reply.AppOffset).Take(16).Select(app => new AgentApp { Id = HostProfiles.Digest(instance + "|" + app.Id), Name = app.DisplayName, Path = HostInstallation.Limit(app.ExecutablePath, 512) }).ToArray();
         reply.AppNext = reply.AppOffset + reply.Apps.Length < matches.Length ? reply.AppOffset + reply.Apps.Length : -1;

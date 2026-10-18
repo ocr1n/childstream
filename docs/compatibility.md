@@ -26,9 +26,9 @@ Test a default Desktop stream on the LAN first.
 | Steam and games | Steam library and Metro Exodus menu/loading rendered after a deliberate main-session handoff; user subsequently reported games working. | Concurrent same-user Steam, all games, launchers and anti-cheat are not certified. |
 | Wallpaper Engine | Child and main processes coexisted. | Playback/effects and monitor mapping are unverified; settings may be shared. |
 | Helper recovery | A deliberately stopped child helper recovered in about 2.6 seconds while both Sunshine hosts stayed running. | Task Scheduler policy, mismatched installations and outdated helpers can still need repair. |
-| Elevation | User previously approved Sunshine UAC through the local preview. Automated tests cover explicit runas dispatch, child validation, pending consent and cancellation. | New app elevation and remote secure-desktop capture/control need live acceptance; main Steam can retain its own prompts. |
+| Elevation | Automated tests cover explicit runas dispatch, child validation, pending consent and cancellation. Live Winver tests on Windows 11 build 26300 showed consent on the main desktop despite child-session tokens/processes; an explicit child-owned parent window did not fix placement. | Consent placement in the child is unresolved. Keep the main desktop accessible for Windows approval. Remote secure-desktop capture/control and other Windows builds remain unverified. |
 | General app discovery | Native metadata enumeration finds Office apps on the development PC. Fixtures cover Blender/Office at custom paths, EXE shortcuts, argument/working-directory preservation, search and byte-bounded pages. | Installed Blender/Office rendering and all portable/Store launchers are not certified. |
-| Maximize / resize | Geometry, reconnect, limits and failure-backoff tests; installed RDP control exposes the display-update API. | Connected desktop resizing and host capture changes still require live acceptance of this build. |
+| Maximize / resize | Viewer fills its workspace and uses proportional smart sizing. The automatic remote-resolution update was reverted after the user reported client resolution regressions. | Initial display/scale parsing remains tested. Client-selected resolutions need live recheck after the rollback; differing aspect ratios can leave letterboxing. |
 | UI/themes | Production-manifest native form checks cover layouts, contrast, theme access, bounded diagnostics and app-picker state. | Synthetic tests do not certify every monitor/DPI or assistive technology. |
 
 ## Pairing regression
@@ -50,7 +50,7 @@ Run `scripts/test.ps1` under Windows PowerShell 5.1 and PowerShell 7. Coverage
 includes display/session validation, setup failures, host selection after upgrades,
 profile/port isolation, stale approvals, JSON validation, real local pipes,
 helper recovery policy, browser isolation, catalog limits, UI busy states, themes,
-pending app consent, search/paging races, hover/pressed contrast, viewport fitting,
+pending app consent, search/paging races, hover/pressed contrast,
 and exclusion of private files from optional bundles. CI builds the production EXE.
 
 Tests do not launch real hosts/games or certify capture/hardware. Results come

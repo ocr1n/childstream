@@ -13,7 +13,7 @@ jobs:
     env:
       CHILDSTREAM_TEST_SHELL: ${{ matrix.shell }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build launcher
         shell: pwsh
         run: '& $env:CHILDSTREAM_TEST_SHELL -NoProfile -ExecutionPolicy Bypass -File .\scripts\build.ps1'
